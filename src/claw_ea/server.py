@@ -37,3 +37,7 @@ def main():
         reg_reminder(mcp, config, ek_client)
 
     mcp.run(transport="stdio")
+
+
+if __name__ == "__main__":
+    main()
