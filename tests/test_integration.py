@@ -8,7 +8,7 @@ def test_end_to_end_attachment_then_note(mock_config):
     """Save an attachment, then create a note linking to it."""
     # Save attachment
     content = base64.b64encode(b"PDF content here").decode()
-    att_result = save_attachment_impl(content, "手术通知.pdf", "", mock_config)
+    att_result = save_attachment_impl(mock_config, file_content=content, filename="手术通知.pdf")
     assert att_result["already_existed"] is False
 
     # Create note linking to attachment

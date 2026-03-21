@@ -19,13 +19,15 @@ export function createSaveAttachmentTool(bridge: McpBridge) {
     label: "保存附件",
     description:
       "Save a file to the attachments directory, organized by date. " +
-      "Skips duplicates (identical content). Handles Chinese filenames.",
+      "Two modes: file_path (local path, preferred) or file_content (base64). " +
+      "Skips duplicates. Handles Chinese filenames.",
     parameters: Type.Object({
-      file_content: Type.String({ description: "Base64-encoded file content" }),
-      filename: Type.String({ description: 'Original filename (e.g. "手术通知_张三.pdf")' }),
+      file_path: Type.Optional(Type.String({ description: 'Local file path (preferred). e.g. "/tmp/openclaw/media/手术通知.pdf"' })),
+      file_content: Type.Optional(Type.String({ description: "Base64-encoded file content (use file_path instead when file is local)" })),
+      filename: Type.Optional(Type.String({ description: "Override filename. Required for file_content, optional for file_path." })),
       subfolder: Type.Optional(Type.String({ description: "Optional subdirectory" })),
     }),
-    async execute(_id: string, params: { file_content: string; filename: string; subfolder?: string }) {
+    async execute(_id: string, params: { file_path?: string; file_content?: string; filename?: string; subfolder?: string }) {
       const result = await bridge.callTool("save_attachment", params);
       return textResult(result);
     },
