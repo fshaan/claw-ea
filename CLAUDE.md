@@ -150,6 +150,42 @@ claw-ea connects to OpenClaw as a **native plugin** (NOT via MCPorter).
 
 **server.py requires `if __name__ == "__main__": main()`** — without this guard, `python -m claw_ea.server` imports the module but never starts the server. Both MCPorter and the OpenClaw plugin wrapper call `python -m claw_ea.server`.
 
+### Agent Prompt Configuration
+
+After installing the plugin, you need to tell the OpenClaw agent **when and how** to use claw-ea tools. OpenClaw assembles its system prompt from workspace files at `~/.openclaw/workspace/`. Two files need changes:
+
+**`AGENTS.md`** — add a behavior rule section:
+
+```markdown
+## Social media message auto-processing (claw-ea)
+
+**Trigger**: When the user forwards work messages from Feishu/WeCom/Telegram
+(surgery notices, meeting schedules, files, screenshots), automatically use
+claw-ea tools. No trigger word needed — decide based on message content.
+
+**Flow**:
+1. Read the message — classify as surgery/meeting/meeting_minutes/task/document/general
+2. If image: read it directly (or call claw_ocr_image if you can't see images)
+3. If attachment: call claw_save_attachment
+4. Create note: call claw_create_note with category, title, structured data, attachment paths
+5. If schedule/task: show summary for user confirmation, then call
+   claw_create_calendar_event / claw_create_reminder
+
+**Multi-message**: Consecutive messages about the same event → merge before processing.
+Different events → process separately.
+
+**Don't trigger**: For chat, Q&A, commands, or anything unrelated to work message archiving.
+```
+
+**`TOOLS.md`** — add a claw-ea section with:
+- Tool table (8 tools, which are auto vs need-confirmation)
+- Message category → action mapping table
+- User name matching list (name + aliases from config)
+- Surgery case time slots
+- Approval summary format template
+
+See the installed `~/.openclaw/workspace/TOOLS.md` for a complete example.
+
 ## Design Documents
 
 - Design doc: `~/.gstack/projects/claw-ea/f.sh-unknown-design-20260321-114310.md`

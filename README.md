@@ -90,7 +90,13 @@ I need you to install the claw-ea plugin. Here are the steps:
    calendar name, and reminder list. Use the detect_obsidian_vault and
    list_apple_calendars tools to discover available options.
 
-5. Restart OpenClaw: openclaw restart
+5. Configure agent behavior — add a "claw-ea" section to
+   ~/.openclaw/workspace/AGENTS.md (trigger rules: when to use claw-ea tools)
+   and ~/.openclaw/workspace/TOOLS.md (tool reference: categories, user name
+   matching, approval flow). See CLAUDE.md "Agent Prompt Configuration" for
+   the full template.
+
+6. Restart OpenClaw: openclaw restart
 ```
 <!-- END AGENT INSTALL INSTRUCTIONS -->
 
@@ -116,7 +122,9 @@ I need you to install the claw-ea plugin. Here are the steps:
 
 4. Create `~/.claw-ea/config.yaml` (see [Config](#config) below)
 
-5. Restart: `openclaw restart`
+5. Configure agent behavior — add claw-ea sections to `~/.openclaw/workspace/AGENTS.md` and `TOOLS.md` (see [CLAUDE.md](CLAUDE.md#agent-prompt-configuration) for templates)
+
+6. Restart: `openclaw restart`
 
 ### MCPorter (optional — for CLI testing)
 
