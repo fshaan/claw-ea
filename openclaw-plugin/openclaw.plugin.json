@@ -1,0 +1,22 @@
+{
+  "id": "claw-ea",
+  "uiHints": {
+    "pythonPath": {
+      "label": "Python Path",
+      "help": "Path to the Python interpreter in the claw-ea virtualenv"
+    },
+    "projectDir": {
+      "label": "Project Directory",
+      "help": "Path to the claw-ea project root"
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": { "type": "boolean" },
+      "pythonPath": { "type": "string" },
+      "projectDir": { "type": "string" }
+    }
+  }
+}

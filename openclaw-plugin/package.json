@@ -1,0 +1,12 @@
+{
+  "name": "claw-ea",
+  "version": "0.1.0",
+  "description": "Medical office automation — Obsidian, Apple Calendar, Reminders",
+  "main": "index.ts",
+  "openclaw": {
+    "extensions": ["./index.ts"]
+  },
+  "dependencies": {
+    "openclaw": "*"
+  }
+}

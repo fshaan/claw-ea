@@ -130,6 +130,26 @@ categories:
 - **Meeting agendas**: When a meeting has an agenda listing the user as presenter/chair/discussant, create reminder tasks for their specific agenda items.
 - **Meeting minutes**: Extract action items and follow-up schedules; only create reminders for items assigned to the user.
 
+## OpenClaw Integration
+
+claw-ea connects to OpenClaw as a **native plugin** (NOT via MCPorter).
+
+**How it works:**
+- `openclaw-plugin/` in this repo contains a TypeScript wrapper (`index.ts` + `mcp-bridge.ts` + `tools.ts`)
+- The wrapper spawns `python -m claw_ea.server` as a subprocess and bridges MCP JSON-RPC over stdin/stdout
+- Each Python MCP tool is registered as an OpenClaw tool via `api.registerTool()`
+- The plugin auto-loads on every OpenClaw restart — no manual action needed
+
+**Key lesson:** MCPorter (`~/.mcporter/mcporter.json`) is a standalone CLI tool for testing MCP servers. It does NOT integrate with OpenClaw's agent. Only native plugins (`~/.openclaw/extensions/`) register tools that the agent can use.
+
+**Adding a new tool:**
+1. Implement the tool in `src/claw_ea/tools/` (Python)
+2. Register it in `server.py`
+3. Add a corresponding tool definition in `openclaw-plugin/src/tools.ts` (TypeScript)
+4. Restart OpenClaw
+
+**server.py requires `if __name__ == "__main__": main()`** — without this guard, `python -m claw_ea.server` imports the module but never starts the server. Both MCPorter and the OpenClaw plugin wrapper call `python -m claw_ea.server`.
+
 ## Design Documents
 
 - Design doc: `~/.gstack/projects/claw-ea/f.sh-unknown-design-20260321-114310.md`
