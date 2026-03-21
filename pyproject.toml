@@ -24,3 +24,9 @@ packages = ["src/claw_ea"]
 markers = ["macos: tests requiring macOS APIs (EventKit, Vision)"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+]
