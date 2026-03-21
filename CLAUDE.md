@@ -16,7 +16,7 @@ The MCP server only provides **side-effect tools** — tools that write files, c
 
 **Core workflow** (called by agent after it classifies the message):
 - `ocr_image` — Local OCR only (macOS Vision framework). Agent's multimodal LLM handles image understanding directly; this tool is the fallback when the LLM lacks vision.
-- `save_attachment` — Saves file to date-organized attachment directory. Dedup: skips if identical file exists.
+- `save_attachment` — Saves file to date-organized attachment directory. Two modes: `file_path` (local path, preferred — uses shutil.copy2) or `file_content` (base64). Dedup: skips if identical file exists.
 - `create_obsidian_note` — Creates Markdown note with YAML frontmatter in Obsidian vault. Dedup via content hash (first 8 chars in filename); returns existing path if duplicate.
 - `create_calendar_event` — Creates event in Apple Calendar via pyobjc EventKit. Returns event ID.
 - `create_reminder` — Creates reminder in Apple Reminders via pyobjc EventKit. Returns reminder ID.
