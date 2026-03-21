@@ -5,18 +5,13 @@ All notable changes to this project will be documented in this file.
 ## [0.1.0.0] - 2026-03-21
 
 ### Added
-- MCP server with FastMCP, stdio transport, eager config loading
-- `save_attachment` tool — date-organized file storage with dedup and collision handling
-- `create_obsidian_note` tool — Markdown notes with YAML frontmatter, content-hash dedup, Obsidian wikilink syntax
-- `create_calendar_event` tool — Apple Calendar integration via pyobjc EventKit, default 1-hour duration
-- `create_reminder` tool — Apple Reminders integration via pyobjc EventKit, due date and priority support
-- `ocr_image` tool — local OCR via macOS Vision framework (Chinese + English)
-- `detect_obsidian_vault` tool — scans common paths for Obsidian vaults
-- `list_apple_calendars` tool — lists system calendars and reminder lists
-- `save_config` tool — validates and writes config.yaml
-- Shared `EventKitClient` with async permission request bridging
-- Config module with dataclass validation, YAML loading, fail-fast on startup
-- Path traversal prevention in attachment and note tools
-- Graceful degradation on non-macOS (calendar/reminder tools disabled with warning)
-- 31 unit and integration tests with two-tier strategy (mock + macOS-real)
-- CLAUDE.md with architecture guide and design decisions
+- **8 MCP tools** for medical office automation — connect via OpenClaw (MCPorter) or any MCP client
+- Forward a message and its attachments are saved automatically, organized by date
+- Obsidian notes created with structured frontmatter — surgery, meeting, and general categories with content-hash dedup (no duplicate notes from repeated forwards)
+- Apple Calendar events created from surgery schedules and meeting notices (via pyobjc EventKit)
+- Apple Reminders created for tasks and agenda items (supports due date and priority)
+- Local OCR for image-based messages — extracts Chinese and English text via macOS Vision
+- Interactive setup wizard: auto-detects your Obsidian vault, lists your calendars, saves config
+- Path traversal prevention on all file operations
+- Graceful fallback on non-macOS — file and Obsidian tools work everywhere, calendar/reminder tools require macOS
+- 31 tests covering all tools with two-tier strategy (mock tests on any platform + real API tests on macOS)
