@@ -66,9 +66,14 @@ def create_obsidian_note_impl(
     attachment_paths: list[str], config: Config,
 ) -> dict:
     """Core logic for create_obsidian_note."""
+    # Sanitize category to prevent path traversal
+    safe_category = "".join(c for c in category if c.isalnum() or c in "-_")
+    if not safe_category:
+        safe_category = "general"
+
     chash = _content_hash(content_data)
     today = date.today().isoformat()
-    filename = f"{today}-{category}-{chash}.md"
+    filename = f"{today}-{safe_category}-{chash}.md"
 
     notes_dir = config.vault_path / config.notes_folder
     notes_dir.mkdir(parents=True, exist_ok=True)

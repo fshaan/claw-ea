@@ -6,7 +6,6 @@ try:
         EKEventStore,
         EKEntityTypeEvent,
         EKEntityTypeReminder,
-        EKAuthorizationStatusAuthorized,
     )
     EVENTKIT_AVAILABLE = True
 except ImportError:

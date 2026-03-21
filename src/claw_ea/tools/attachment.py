@@ -22,7 +22,15 @@ def save_attachment_impl(
         target_dir = target_dir / subfolder
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    target_file = target_dir / filename
+    # Sanitize filename: strip path separators and parent references
+    safe_name = Path(filename).name  # removes any directory components
+    if not safe_name or safe_name in (".", ".."):
+        raise ValueError(f"Invalid filename: {filename}")
+    target_file = target_dir / safe_name
+
+    # Verify resolved path stays within attachments directory
+    if not target_file.resolve().is_relative_to(config.attachments_path.resolve()):
+        raise ValueError(f"Path traversal detected in filename: {filename}")
 
     if target_file.exists() and target_file.read_bytes() == data:
         return {"saved_path": str(target_file), "already_existed": True}
