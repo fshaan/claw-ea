@@ -41,7 +41,8 @@ def test_note_with_attachment_links(mock_config):
     paths = ["/path/to/手术通知.pdf", "/path/to/会议纪要.docx"]
     result = create_obsidian_note_impl("document", data["title"], data, paths, mock_config)
     content = Path(result["note_path"]).read_text(encoding="utf-8")
-    assert "手术通知.pdf" in content
+    assert "[[手术通知.pdf]]" in content
+    assert "[[会议纪要.docx]]" in content
 
 
 def test_dedup_same_content(mock_config):

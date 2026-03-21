@@ -40,6 +40,8 @@ def _render_body(category: str, title: str, content_data: dict, attachment_paths
     field_labels = {
         "patient": "患者", "procedure": "术式", "surgeon": "主刀",
         "datetime": "时间", "location": "地点",
+        "meeting_title": "会议主题", "attendees": "参会人员",
+        "meeting_date": "会议日期", "priority": "优先级",
     }
     detail_lines = []
     for key, label in field_labels.items():
