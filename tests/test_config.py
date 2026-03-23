@@ -41,3 +41,17 @@ def test_load_missing_required_field(tmp_path):
     config_file.write_text(yaml.dump({"user": {"name": "张医生"}}))
     with pytest.raises(ConfigError, match="obsidian"):
         load_config(config_file)
+
+
+def test_attachments_folder_alias(tmp_path):
+    """Config with 'folder' instead of 'base_path' should work."""
+    config_file = tmp_path / "config.yaml"
+    att_dir = tmp_path / "99_Attachments"
+    config_file.write_text(yaml.dump({
+        "user": {"name": "张医生", "aliases": []},
+        "obsidian": {"vault_path": str(tmp_path), "notes_folder": "Inbox"},
+        "attachments": {"folder": str(att_dir)},
+        "apple": {"calendar_name": "日历", "reminder_list": "任务箱"},
+    }))
+    config = load_config(config_file)
+    assert config.attachments_path == att_dir

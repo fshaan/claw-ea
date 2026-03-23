@@ -61,7 +61,9 @@ def _parse_config(raw: dict[str, Any], path: Path) -> Config:
     notes_folder = require("obsidian", "notes_folder")
 
     att = raw.get("attachments", {})
-    attachments_path = Path(att.get("base_path", str(vault_path / "attachments"))).expanduser()
+    # Accept both "base_path" (documented) and "folder" (common alias)
+    att_path_str = att.get("base_path") or att.get("folder") or str(vault_path / "attachments")
+    attachments_path = Path(att_path_str).expanduser()
     organize_by_date = att.get("organize_by_date", True)
 
     calendar_name = require("apple", "calendar_name")
