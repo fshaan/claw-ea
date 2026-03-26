@@ -21,6 +21,13 @@ class Config:
     reminder_list: str
     surgery_time_slots: dict[int, str]
     surgery_user_roles: list[str]
+    # Converter settings (all optional)
+    converter_paths: dict[str, str]  # e.g. {"docling": "/path/to/docling"}
+    converter_routing: dict[str, dict[str, list[str]]]  # e.g. {".pdf": {"default": ["docling"]}}
+    lmstudio_endpoint: str
+    lmstudio_api_key: str
+    lmstudio_model: str
+    lmstudio_timeout: int
 
 
 def load_config(path: Path | None = None) -> Config:
@@ -73,6 +80,25 @@ def _parse_config(raw: dict[str, Any], path: Path) -> Config:
     surgery_time_slots = {int(k): v for k, v in cats.get("schedule_time_slots", {1: "09:00", 2: "13:00", 3: "17:00", 4: "20:00"}).items()}
     surgery_user_roles = cats.get("user_roles", ["主刀", "带组", "一助"])
 
+    # Converters (entire section optional)
+    conv = raw.get("converters", {})
+
+    lms = conv.get("lmstudio", {})
+    lmstudio_endpoint = lms.get("endpoint", "")
+    lmstudio_api_key = lms.get("api_key", "")
+    lmstudio_model = lms.get("model", "")
+    lmstudio_timeout = lms.get("timeout", 120)
+
+    converter_paths = conv.get("paths", {})
+
+    # Normalize routing keys: config uses short names (pdf, image),
+    # internal uses dot-prefixed (.pdf, .image)
+    raw_routing = conv.get("routing", {})
+    converter_routing = {}
+    for fmt, chains in raw_routing.items():
+        key = f".{fmt}" if not fmt.startswith(".") else fmt
+        converter_routing[key] = chains
+
     return Config(
         user_name=user_name,
         user_aliases=user_aliases,
@@ -84,4 +110,10 @@ def _parse_config(raw: dict[str, Any], path: Path) -> Config:
         reminder_list=reminder_list,
         surgery_time_slots=surgery_time_slots,
         surgery_user_roles=surgery_user_roles,
+        converter_paths=converter_paths,
+        converter_routing=converter_routing,
+        lmstudio_endpoint=lmstudio_endpoint,
+        lmstudio_api_key=lmstudio_api_key,
+        lmstudio_model=lmstudio_model,
+        lmstudio_timeout=lmstudio_timeout,
     )
