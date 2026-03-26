@@ -18,6 +18,7 @@ import {
   createOcrImageTool,
   createDetectVaultTool,
   createListCalendarsTool,
+  createConvertToMarkdownTool,
   createSaveConfigTool,
 } from "./src/tools.js";
 
@@ -55,6 +56,7 @@ const clawEaPlugin = {
     api.registerTool(() => createObsidianNoteTool(bridge));
     api.registerTool(() => createCalendarEventTool(bridge));
     api.registerTool(() => createReminderTool(bridge));
+    api.registerTool(() => createConvertToMarkdownTool(bridge));
     api.registerTool(() => createOcrImageTool(bridge));
 
     // Configuration tools
@@ -63,7 +65,7 @@ const clawEaPlugin = {
     api.registerTool(() => createSaveConfigTool(bridge));
 
     api.logger.info(
-      `[claw-ea] Registered 8 tools (python=${pythonPath}, project=${projectDir})`,
+      `[claw-ea] Registered 9 tools (python=${pythonPath}, project=${projectDir})`,
     );
   },
 };
