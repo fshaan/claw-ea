@@ -1,91 +1,93 @@
 # claw-ea
 
-Doctors are too busy to organize information.
+[English](README.en.md)
 
-Surgery schedules in Feishu group chats, meeting notices on WeCom, files received via Telegram — glanced at once and buried under hundreds of messages. Important surgeries get forgotten, meeting times slip, files disappear.
+医生没时间整理信息。
 
-claw-ea fixes this: **forward the message to your AI assistant, everything else happens automatically.**
+飞书群里的手术排班、企微发来的开会通知、Telegram 收到的文件——扫一眼就被几百条消息淹没。重要手术忘了、开会时间记错、文件找不到了。
 
-## Requirements
+claw-ea 解决这个问题：**把消息转发给 AI 助手，剩下的全自动。**
 
-> **Current version (v0.1.3.1) is macOS-only and designed for Chinese-speaking medical professionals.**
+## 环境要求
 
-| Requirement | Details |
-|-------------|---------|
-| **OS** | macOS 13+ (Ventura or later) — Apple Calendar and Reminders via pyobjc EventKit, OCR via macOS Vision framework |
-| **Python** | 3.11+ with [uv](https://docs.astral.sh/uv/) package manager |
-| **Obsidian** | Any version — notes written as standard Markdown files |
-| **MCP client** | [OpenClaw](https://openclaw.com) (native plugin), or any MCP-compatible client (Claude Desktop, Cursor) |
-| **Converter tools** | [docling](https://github.com/DS4SD/docling) (required, primary converter) + [markitdown](https://github.com/microsoft/markitdown) (recommended, fallback) |
-| **Language** | Tool descriptions and note templates are in Chinese; message processing supports Chinese + English |
+> **当前版本（v0.1.3.1）仅支持 macOS，面向中文医疗场景。**
 
-Not supported yet: Windows, Linux, non-Chinese locales. Cross-platform support is deferred until there's real demand.
+| 条件 | 说明 |
+|------|------|
+| **操作系统** | macOS 13+（Ventura 及以上）— Apple 日历/提醒事项通过 pyobjc EventKit 调用，OCR 通过 macOS Vision 框架 |
+| **Python** | 3.11+，使用 [uv](https://docs.astral.sh/uv/) 包管理器 |
+| **Obsidian** | 任意版本 — 笔记以标准 Markdown 文件写入 |
+| **MCP 客户端** | [OpenClaw](https://openclaw.com)（原生插件）或任何支持 MCP 协议的客户端（Claude Desktop、Cursor 等） |
+| **转换工具** | [docling](https://github.com/DS4SD/docling)（必装，主力转换器）+ [markitdown](https://github.com/microsoft/markitdown)（推荐，回退方案） |
 
-## What it does
+暂不支持 Windows、Linux 和非中文环境。跨平台支持等有实际需求后再做。
 
-Forward work messages from social channels (Feishu, WeCom, Telegram) to OpenClaw, and claw-ea will:
+## 功能
 
-- **Archive attachments** — files saved by date, duplicates skipped automatically
-- **Create Obsidian notes** — structured Markdown with YAML frontmatter and attachment links, categorized (surgery, meeting, task, document)
-- **Sync calendar** — surgery schedules and meeting notices written to Apple Calendar (requires your confirmation before writing)
-- **Create reminders** — action items and your agenda assignments added to Apple Reminders
-- **Convert to Markdown** — PDF, Word, Excel, PowerPoint, images, and plaintext files all converted to searchable Markdown before archiving (6 converter backends with automatic fallback)
-- **Read images** — surgery schedule screenshots and meeting notice images processed via OCR (Chinese + English), understood by AI
+把飞书/企微/Telegram 的工作消息转发给 OpenClaw，claw-ea 自动完成：
 
-You do one thing: **forward the message**. Zero operation, zero learning curve.
+- **归档附件** — 按日期保存文件，自动跳过重复
+- **创建 Obsidian 笔记** — 带 YAML frontmatter 的结构化 Markdown 笔记，按类别（会议、任务、文件等）分类
+- **同步日历** — 手术排班和会议通知写入 Apple 日历，事件自带 15 分钟提前提醒（写入前需你确认）
+- **创建提醒** — 待办事项和你的议程任务加入 Apple 提醒事项
+- **转为 Markdown** — PDF、Word、Excel、PPT、图片、纯文本文件全部转为可搜索的 Markdown 后归档（6 个转换器后端，自动回退）
+- **识别图片** — 手术排班截图、开会通知图片通过 OCR 识别（中英文），AI 理解内容
 
-## Use cases
+你只做一件事：**转发消息。** 零操作，零学习成本。
 
-**Surgery schedule**: Forward a schedule screenshot → AI identifies all cases → your lead surgeon / team lead cases automatically create calendar events with 15-minute reminders (estimated by case order: 1st case 9:00, 2nd case 13:00...)
+## 使用场景
 
-**Meeting notice**: Forward a meeting notice → calendar event created → if the agenda lists you as presenter/chair, a reminder task is also created
+**手术排班**：转发排班截图 → AI 识别所有台次 → 你参与的手术自动创建日历事件（含 15 分钟提前提醒，按台次估算时间：第 1 台 09:00，第 2 台 13:00…）
 
-**Meeting minutes**: Forward minutes document → action items extracted → your assigned tasks become reminders → next meeting time added to calendar
+**开会通知**：转发会议通知 → 自动创建日历事件 → 如果议程中你是主持/汇报人，还会创建提醒任务
 
-**Daily files**: Forward PDF, Word → file converted to Markdown → content embedded in searchable Obsidian note (original file archived as backup)
+**会议纪要**：转发纪要文档 → 提取待办事项 → 你的任务创建为提醒 → 下次开会时间加入日历
 
-**All calendar events and reminders require your confirmation before writing.** Obsidian notes and file archiving happen automatically (low risk, editable anytime).
+**日常文件**：转发 PDF、Word → 文件转为 Markdown → 内容嵌入可搜索的 Obsidian 笔记（原始文件作为附件备份）
 
-## Architecture
+**所有日历事件和提醒写入前都需要你确认。** Obsidian 笔记和附件归档自动完成（低风险，随时可编辑）。
 
-claw-ea is a Python MCP (Model Context Protocol) Server connected to OpenClaw as a native plugin. Core design principles:
+## 架构
 
-- **Tools only perform side effects** (write files, call APIs, read system state) — all "understanding" (message classification, image comprehension, approval summary formatting) is handled by the AI agent's LLM
-- **MCP open standard** — the same server works with OpenClaw, Claude Desktop, Cursor, or any MCP client
-- **Fully local processing** — medical information is sensitive, nothing is uploaded to third-party services
-- **pyobjc EventKit** (not AppleScript) — avoids Chinese character escaping issues, returns proper event IDs and error info
+claw-ea 是一个 Python MCP（Model Context Protocol）服务器，通过原生插件连接 OpenClaw。核心设计：
 
-9 MCP Tools: `save_attachment`, `convert_to_markdown`, `create_obsidian_note`, `create_calendar_event`, `create_reminder`, `ocr_image`, `detect_obsidian_vault`, `list_apple_calendars`, `save_config`
+- **工具只做副作用操作**（写文件、调 API、读系统状态）— 所有"理解"（消息分类、图片理解、审批摘要格式化）由 AI agent 的 LLM 完成
+- **MCP 开放标准** — 同一个服务器兼容 OpenClaw、Claude Desktop、Cursor 等任何 MCP 客户端
+- **全部本地处理** — 医疗信息敏感，不上传任何第三方服务
+- **pyobjc EventKit**（非 AppleScript）— 避免中文特殊字符的转义问题，返回事件 ID 和错误信息
 
-## Quick start
+9 个 MCP 工具：`save_attachment`、`convert_to_markdown`、`create_obsidian_note`、`create_calendar_event`、`create_reminder`、`ocr_image`、`detect_obsidian_vault`、`list_apple_calendars`、`save_config`
+
+## 快速开始
 
 ```bash
 git clone https://github.com/fshaan/claw-ea.git
 cd claw-ea && uv sync
 ```
 
-## Connect to OpenClaw
+## 连接 OpenClaw
 
-claw-ea connects to OpenClaw as a native plugin. The `openclaw-plugin/` directory in this repo contains the TypeScript bridge layer that registers the Python MCP Server as OpenClaw tools.
+claw-ea 以原生插件方式连接 OpenClaw。仓库中的 `openclaw-plugin/` 目录包含 TypeScript 桥接层，将 Python MCP 服务器注册为 OpenClaw 工具。
 
-### Automated installation (for AI agents)
+### 自动安装（给 AI agent 用）
 
-Copy and paste the following instructions to your OpenClaw agent — it will complete setup automatically:
+把以下指令粘贴给你的 OpenClaw agent，它会自动完成安装：
 
 <!-- AGENT INSTALL INSTRUCTIONS — paste this block to your OpenClaw agent -->
 ```
-I need you to install the claw-ea plugin. Here are the steps:
+我需要你安装 claw-ea 插件，步骤如下：
 
-1. Clone the repo and install Python dependencies:
+1. 克隆仓库并安装 Python 依赖：
    cd ~/Workspace/Claude && git clone https://github.com/fshaan/claw-ea.git claw_EA
    cd claw_EA && uv sync
 
-2. Copy the OpenClaw plugin wrapper (already included in the repo):
+2. 复制 OpenClaw 插件（仓库中已包含）：
    cp -r openclaw-plugin ~/.openclaw/extensions/claw-ea
    cd ~/.openclaw/extensions/claw-ea && npm install
 
-3. Add to ~/.openclaw/openclaw.json — in "plugins.allow" array, add "claw-ea".
-   In "plugins.entries", add:
+3. 在 ~/.openclaw/openclaw.json 中注册插件：
+   - "plugins.allow" 数组中加入 "claw-ea"
+   - "plugins.entries" 中加入：
    "claw-ea": {
      "enabled": true,
      "config": {
@@ -93,69 +95,67 @@ I need you to install the claw-ea plugin. Here are the steps:
        "projectDir": "<HOME>/Workspace/Claude/claw_EA"
      }
    }
-   In "plugins.installs", add:
+   - "plugins.installs" 中加入：
    "claw-ea": {
      "source": "path",
      "installPath": "<HOME>/.openclaw/extensions/claw-ea",
      "version": "0.1.3.1"
    }
-   Replace <HOME> with the actual home directory path.
+   将 <HOME> 替换为实际的 home 目录路径。
 
-4. Create config — run: mkdir -p ~/.claw-ea
-   Then create ~/.claw-ea/config.yaml with user name, Obsidian vault path,
-   calendar name, and reminder list. Use the detect_obsidian_vault and
-   list_apple_calendars tools to discover available options.
+4. 创建配置 — 运行: mkdir -p ~/.claw-ea
+   然后创建 ~/.claw-ea/config.yaml，填入用户名、Obsidian vault 路径、
+   日历名称和提醒列表。使用 detect_obsidian_vault 和
+   list_apple_calendars 工具发现可用选项。
 
-5. Configure agent behavior — add a "claw-ea" section to
-   ~/.openclaw/workspace/AGENTS.md (trigger rules: when to use claw-ea tools)
-   and ~/.openclaw/workspace/TOOLS.md (tool reference: categories, user name
-   matching, approval flow). See CLAUDE.md "Agent Prompt Configuration" for
-   the full template.
+5. 配置 agent 行为 — 参考 openclaw-plugin/PROMPT_TEMPLATE.md，
+   将对应内容添加到 ~/.openclaw/workspace/AGENTS.md（触发规则）
+   和 ~/.openclaw/workspace/TOOLS.md（工具参考）。
 
-6. Restart OpenClaw: openclaw restart
+6. 重启 OpenClaw: openclaw restart
 ```
 <!-- END AGENT INSTALL INSTRUCTIONS -->
 
-### Manual installation
+### 手动安装
 
-1. Clone and install:
+1. 克隆并安装：
    ```bash
    cd ~/Workspace/Claude
    git clone https://github.com/fshaan/claw-ea.git claw_EA
    cd claw_EA && uv sync
    ```
 
-2. Install the OpenClaw plugin wrapper:
+2. 安装 OpenClaw 插件：
    ```bash
    cp -r openclaw-plugin ~/.openclaw/extensions/claw-ea
    cd ~/.openclaw/extensions/claw-ea && npm install
    ```
 
-3. Register the plugin in `~/.openclaw/openclaw.json`:
-   - Add `"claw-ea"` to `plugins.allow`
-   - Add entry to `plugins.entries` with `pythonPath` and `projectDir`
-   - Add entry to `plugins.installs` with `source: "path"`
+3. 在 `~/.openclaw/openclaw.json` 中注册插件：
+   - `plugins.allow` 中加入 `"claw-ea"`
+   - `plugins.entries` 中加入 `pythonPath` 和 `projectDir` 配置
+   - `plugins.installs` 中加入 `source: "path"` 条目
 
-4. Create `~/.claw-ea/config.yaml` (see [Config](#config) below)
+4. 创建 `~/.claw-ea/config.yaml`（见下方[配置](#配置)）
 
-5. Configure agent behavior — add claw-ea sections to `~/.openclaw/workspace/AGENTS.md` and `TOOLS.md` (see [CLAUDE.md](CLAUDE.md#agent-prompt-configuration) for templates)
+5. 配置 agent 行为 — 参考 `openclaw-plugin/PROMPT_TEMPLATE.md`，添加到 `~/.openclaw/workspace/AGENTS.md` 和 `TOOLS.md`
 
-6. Restart: `openclaw restart`
+6. 重启：`openclaw restart`
 
-### MCPorter (optional — for CLI testing)
+### MCPorter（可选 — 用于 CLI 调试）
 
-MCPorter is a standalone CLI debugging tool. It can call MCP tools directly but does NOT register them with the OpenClaw agent.
+MCPorter 是独立的 CLI 调试工具，可以直接调用 MCP 工具，但不会将工具注册到 OpenClaw agent。
 
 ```bash
-# Add to ~/.mcporter/mcporter.json:
+# 在 ~/.mcporter/mcporter.json 中添加：
 # "claw-ea": { "command": ".../.venv/bin/python", "args": ["-m", "claw_ea.server"], "cwd": "..." }
 
 mcporter call claw-ea.detect_obsidian_vault
 ```
 
-### Other MCP clients
+### 其他 MCP 客户端
 
-Works with Claude Desktop, Cursor, or any MCP client supporting stdio transport:
+支持 Claude Desktop、Cursor 或任何兼容 stdio 传输的 MCP 客户端：
 
 ```json
 {
@@ -169,61 +169,56 @@ Works with Claude Desktop, Cursor, or any MCP client supporting stdio transport:
 }
 ```
 
-## Config
+## 配置
 
-Create `~/.claw-ea/config.yaml`:
+创建 `~/.claw-ea/config.yaml`：
 
 ```yaml
 user:
-  name: Your Name           # Used for matching in meeting agendas and surgery schedules
-  aliases: [Alias1, Alias2] # English name, abbreviations, etc.
+  name: 张医生              # 用于在排班表和议程中匹配你的名字
+  aliases: [张三, Dr. Zhang] # 英文名、简称等
 
 obsidian:
   vault_path: ~/Obsidian/my-vault
-  notes_folder: Inbox/OpenClaw    # Relative to vault root
+  notes_folder: Inbox/OpenClaw    # 相对于 vault 根目录
 
 attachments:
   base_path: ~/Obsidian/my-vault/attachments/OpenClaw
   organize_by_date: true
 
 apple:
-  calendar_name: Work              # Must already exist in Calendar.app
-  reminder_list: OpenClaw          # Must already exist in Reminders.app
+  calendar_name: 工作              # 必须已存在于日历 App 中
+  reminder_list: OpenClaw          # 必须已存在于提醒事项 App 中
 
 categories:
   surgery:
     schedule_time_slots:
-      1: "09:00"    # 1st case
-      2: "13:00"    # 2nd case
-      3: "17:00"    # 3rd case
-      4: "20:00"    # 4th case (emergency/add-on)
-    user_roles: [主刀, 带组, 一助]  # Lead surgeon, team lead, first assistant
+      1: "09:00"    # 第 1 台
+      2: "13:00"    # 第 2 台
+      3: "17:00"    # 第 3 台
+      4: "20:00"    # 第 4 台（急诊/加台）
+    user_roles: [主刀, 带组, 一助]
 ```
 
-Tip: After installation, use the `detect_obsidian_vault` and `list_apple_calendars` tools to discover available vault paths and calendar names.
+安装后可以用 `detect_obsidian_vault` 和 `list_apple_calendars` 工具发现可用的 vault 路径和日历名称。
 
-## Requirements
-
-- Python 3.11+
-- macOS (Apple Calendar/Reminders and Vision OCR require macOS — file and Obsidian tools work on any platform)
-
-## Development
+## 开发
 
 ```bash
 uv sync --dev
-uv run pytest                    # All tests
-uv run pytest -m "not macos"     # Skip macOS API tests
+uv run pytest                    # 全部测试
+uv run pytest -m "not macos"     # 跳过 macOS API 测试
 ```
 
-See [CLAUDE.md](CLAUDE.md) for architecture details and design decisions.
+架构详情和设计决策见 [CLAUDE.md](CLAUDE.md)。
 
-## Contributors
+## 贡献者
 
-This project was designed and built collaboratively by a human developer and AI:
+本项目由人类开发者和 AI 协作设计和构建：
 
-- **f.sh** — Product vision, domain expertise (medical workflows), design decisions, code review
-- **Claude (Anthropic)** — Architecture design, implementation, testing, documentation
+- **f.sh** — 产品设想、领域专业知识（医疗工作流）、设计决策、代码审查
+- **Claude (Anthropic)** — 架构设计、代码实现、测试、文档
 
-## License
+## 许可证
 
 [MIT](LICENSE)
