@@ -21,7 +21,7 @@ You do one thing: **forward the message**. Zero operation, zero learning curve.
 
 ## Use cases
 
-**Surgery schedule**: Forward a schedule screenshot → AI identifies all cases → your lead surgeon / team lead cases automatically create calendar events (estimated by case order: 1st case 9:00, 2nd case 13:00...) → Obsidian records the full schedule
+**Surgery schedule**: Forward a schedule screenshot → AI identifies all cases → your lead surgeon / team lead cases automatically create calendar events with 15-minute reminders (estimated by case order: 1st case 9:00, 2nd case 13:00...)
 
 **Meeting notice**: Forward a meeting notice → calendar event created → if the agenda lists you as presenter/chair, a reminder task is also created
 
@@ -82,7 +82,7 @@ I need you to install the claw-ea plugin. Here are the steps:
    "claw-ea": {
      "source": "path",
      "installPath": "<HOME>/.openclaw/extensions/claw-ea",
-     "version": "0.1.3.0"
+     "version": "0.1.3.1"
    }
    Replace <HOME> with the actual home directory path.
 

@@ -190,9 +190,12 @@ claw-ea tools. No trigger word needed — decide based on message content.
 2. If image: read it directly (or call claw_ocr_image if you can't see images)
 3. If attachment: call claw_save_attachment
 4. If file attached (PDF/docx/pptx/xlsx/image/plaintext): call claw_convert_to_markdown → get md_path
-5. Create note: call claw_create_note with category, title, structured data, attachment paths, raw_body_path=md_path
-6. If schedule/task: show summary for user confirmation, then call
-   claw_create_calendar_event / claw_create_reminder
+   - PPT: read converted MD, summarize, pass summary to create_note via content_data (not raw_body_path)
+5. Create note (surgery excluded — no note for surgery): call claw_create_note with category, title, structured data, attachment paths, raw_body_path=md_path
+6. If schedule/task: show summary for user confirmation, then call:
+   - Surgery: claw_create_calendar_event only (no note, no reminder). Events include 15-min alarm.
+   - Meeting: claw_create_calendar_event + claw_create_reminder (if user has agenda items)
+   - Task: claw_create_reminder
 
 **Multi-message**: Consecutive messages about the same event → merge before processing.
 Different events → process separately.
