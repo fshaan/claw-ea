@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2.0] - 2026-03-26
+
+### Added
+- **Markdown-first content pipeline** — new `convert_to_markdown` MCP tool converts files to Markdown before archiving to Obsidian, making all content searchable and linkable
+- **5 converter backends** with configurable fallback chains: docling (default), markitdown, MinerU (academic PDFs), LM Studio (vision OCR), macOS Vision OCR (last-resort)
+- **`dispatch()` routing engine** — routes files by extension, supports hint-based sub-routing (e.g. `academic` for research PDFs), automatically falls back through the converter chain
+- **`is_usable()` quality check** — binary check for empty/garbled output (≥80% valid Unicode), triggers fallback when a converter produces unusable results
+- **`raw_body_path` parameter** for `create_obsidian_note` — reads converted Markdown from file instead of passing through agent context, avoiding token waste on large documents
+- **Configurable converter paths** — `converters.paths` in config.yaml for cross-venv CLI discovery when `shutil.which()` fails
+- **Process group cleanup** — `subprocess.Popen(process_group=0)` + `os.killpg()` ensures converter subprocesses are fully killed on timeout (no zombie processes)
+- **Temp file lifecycle management** — converter output written to `/tmp/claw-ea-*.md`, deleted after note creation, stale files cleaned on server startup
+- **OpenClaw plugin updated** with `claw_convert_to_markdown` tool definition and `raw_body_path` parameter on `claw_create_note`
+- 83 tests (up from 38) — full coverage of routing, fallback chains, quality checks, temp file cleanup, and integration tests with real CLIs
+
 ## [0.1.1.0] - 2026-03-21
 
 ### Added
