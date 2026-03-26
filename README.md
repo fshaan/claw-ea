@@ -6,6 +6,21 @@ Surgery schedules in Feishu group chats, meeting notices on WeCom, files receive
 
 claw-ea fixes this: **forward the message to your AI assistant, everything else happens automatically.**
 
+## Requirements
+
+> **Current version (v0.1.3.1) is macOS-only and designed for Chinese-speaking medical professionals.**
+
+| Requirement | Details |
+|-------------|---------|
+| **OS** | macOS 13+ (Ventura or later) — Apple Calendar and Reminders via pyobjc EventKit, OCR via macOS Vision framework |
+| **Python** | 3.11+ with [uv](https://docs.astral.sh/uv/) package manager |
+| **Obsidian** | Any version — notes written as standard Markdown files |
+| **MCP client** | [OpenClaw](https://openclaw.com) (native plugin), or any MCP-compatible client (Claude Desktop, Cursor) |
+| **Converter tools** | [docling](https://github.com/DS4SD/docling) (required, primary converter) + [markitdown](https://github.com/microsoft/markitdown) (recommended, fallback) |
+| **Language** | Tool descriptions and note templates are in Chinese; message processing supports Chinese + English |
+
+Not supported yet: Windows, Linux, non-Chinese locales. Cross-platform support is deferred until there's real demand.
+
 ## What it does
 
 Forward work messages from social channels (Feishu, WeCom, Telegram) to OpenClaw, and claw-ea will:
