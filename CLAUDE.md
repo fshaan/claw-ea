@@ -17,7 +17,7 @@ The MCP server only provides **side-effect tools** — tools that write files, c
 **Core workflow** (called by agent after it classifies the message):
 - `ocr_image` — Local OCR only (macOS Vision framework). Agent's multimodal LLM handles image understanding directly; this tool is the fallback when the LLM lacks vision.
 - `save_attachment` — Saves file to date-organized attachment directory. Two modes: `file_path` (local path, preferred — uses shutil.copy2) or `file_content` (base64). Dedup: skips if identical file exists.
-- `convert_to_markdown` — Converts files (PDF, docx, pptx, xlsx, images) to Markdown via configurable converter chains (docling → markitdown → mineru → lmstudio → vision_ocr). Returns temp file path for `create_obsidian_note`'s `raw_body_path`. Fallback: if primary converter fails or output is garbled, automatically tries the next in chain.
+- `convert_to_markdown` — Converts files (PDF, docx, pptx, xlsx, CSV, HTML, images, plaintext) to Markdown via configurable converter chains (docling → markitdown → mineru → lmstudio → vision_ocr → passthrough). Returns temp file path for `create_obsidian_note`'s `raw_body_path`. Fallback: if primary converter fails or output is garbled, automatically tries the next in chain. Plaintext files (.txt, .md, .rst, .log) use a passthrough converter.
 - `create_obsidian_note` — Creates Markdown note with YAML frontmatter in Obsidian vault. Supports `raw_body_path` to embed converted Markdown content. Dedup via content hash (first 8 chars in filename); returns existing path if duplicate.
 - `create_calendar_event` — Creates event in Apple Calendar via pyobjc EventKit. Returns event ID.
 - `create_reminder` — Creates reminder in Apple Reminders via pyobjc EventKit. Returns reminder ID.
@@ -42,7 +42,7 @@ User message → [OpenClaw Agent / any MCP client]
                     ├─ Agent classifies message, fills structured JSON
                     │
                     ├─ Calls save_attachment (auto)
-                    ├─ Calls convert_to_markdown (auto, for non-text files)
+                    ├─ Calls convert_to_markdown (auto, for all files including plaintext)
                     ├─ Calls create_obsidian_note (auto, with raw_body_path from convert_to_markdown)
                     │
                     ├─ Agent formats approval summary, sends to user
@@ -59,7 +59,7 @@ claw-ea/
 ├── src/claw_ea/
 │   ├── server.py           # MCP server entry point
 │   ├── config.py           # Config loading/saving/validation
-│   ├── converters.py       # Converter dispatch, routing, fallback chains, is_usable()
+│   ├── converters.py       # Converter dispatch, routing, fallback chains, passthrough, is_usable()
 │   ├── eventkit_utils.py   # Shared EKEventStore init + permissions
 │   └── tools/
 │       ├── ocr.py          # ocr_image (macOS Vision framework)
@@ -189,7 +189,7 @@ claw-ea tools. No trigger word needed — decide based on message content.
 1. Read the message — classify as surgery/meeting/meeting_minutes/task/document/general
 2. If image: read it directly (or call claw_ocr_image if you can't see images)
 3. If attachment: call claw_save_attachment
-4. If non-text file (PDF/docx/pptx/xlsx/image): call claw_convert_to_markdown → get md_path
+4. If file attached (PDF/docx/pptx/xlsx/image/plaintext): call claw_convert_to_markdown → get md_path
 5. Create note: call claw_create_note with category, title, structured data, attachment paths, raw_body_path=md_path
 6. If schedule/task: show summary for user confirmation, then call
    claw_create_calendar_event / claw_create_reminder
