@@ -325,3 +325,20 @@ class TestVisionOcr:
         result = convert_vision_ocr(img)
         assert "手术通知内容" in result
         mock_ocr.assert_called_once_with(img)
+
+
+@pytest.mark.converter
+class TestMarkitdownIntegration:
+    """Integration tests that call real markitdown CLI."""
+
+    def test_convert_csv(self, tmp_path):
+        """Test markitdown with a CSV file."""
+        if not markitdown_is_available({}):
+            pytest.skip("markitdown not installed")
+
+        csv_file = tmp_path / "test.csv"
+        csv_file.write_text("name,age\n张三,45\n李四,32", encoding="utf-8")
+
+        result = convert_markitdown(csv_file, {}, timeout=30)
+        assert "张三" in result
+        assert "45" in result
