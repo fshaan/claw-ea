@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3.1] - 2026-03-26
+
+### Changed
+- **Surgery schedules → calendar events only** — surgery category now creates calendar events (not reminders), no Obsidian note
+- **Default 15-minute alarm** on all calendar events created via `create_calendar_event`
+
+### Fixed
+- Tool description constraints corrected: surgery routes to `create_calendar_event` (was incorrectly pointing to `create_reminder`)
+
 ## [0.1.3.0] - 2026-03-26
 
 ### Added
