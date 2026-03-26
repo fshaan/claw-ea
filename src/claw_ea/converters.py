@@ -144,7 +144,10 @@ def convert_markitdown(file_path: Path, config_paths: dict[str, str], timeout: i
         stdout, stderr = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         _kill_process_group(proc.pid)
-        proc.wait(timeout=5)
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
         raise TimeoutError(f"markitdown timed out after {timeout}s on {file_path}")
 
     if proc.returncode != 0:
