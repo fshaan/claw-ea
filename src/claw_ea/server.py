@@ -12,6 +12,13 @@ def main():
         print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(1)
 
+    # Clean up stale temp files from previous runs
+    from claw_ea.converters import cleanup_stale_temps
+    cleaned = cleanup_stale_temps()
+    if cleaned:
+        import sys
+        print(f"Cleaned up {cleaned} stale temp file(s)", file=sys.stderr)
+
     ek_client = None
     try:
         from claw_ea.eventkit_utils import EventKitClient
