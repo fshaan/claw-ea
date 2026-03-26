@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from claw_ea.config import Config
 
 try:
-    from EventKit import EKEvent, EKSpanThisEvent
+    from EventKit import EKAlarm, EKEvent, EKSpanThisEvent
     from Foundation import NSDate
     EVENTKIT_AVAILABLE = True
 except ImportError:
@@ -47,6 +47,10 @@ async def create_calendar_event_impl(
         end_dt = start_dt + timedelta(hours=1)
         event.setEndDate_(_parse_datetime(end_dt.isoformat()))
 
+    # Default: 15-minute reminder before event
+    alarm = EKAlarm.alarmWithRelativeOffset_(-15 * 60)
+    event.addAlarm_(alarm)
+
     if location:
         event.setLocation_(location)
     if notes:
@@ -83,7 +87,7 @@ def register(mcp_instance, config: Config, ek_client):
             event_id: Apple Calendar event identifier
             calendar: Calendar name used
 
-        Note: Do NOT use for surgery schedules — use create_reminder instead.
+        For surgery schedules: this is the primary action (no note, no reminder).
         """
         return await create_calendar_event_impl(
             title, start_time, end_time or None, location or None, notes or None,

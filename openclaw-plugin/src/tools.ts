@@ -42,7 +42,7 @@ export function createObsidianNoteTool(bridge: McpBridge) {
       "Create an Obsidian note with YAML frontmatter. Deduplicates by content hash. " +
       "Categories: surgery, meeting, meeting_minutes, task, document, general. " +
       "IMPORTANT: For files, raw_body_path MUST come from convert_to_markdown. " +
-      "Do NOT create notes for surgery category — use create_reminder only.",
+      "Do NOT create notes for surgery category — use create_calendar_event only.",
     parameters: Type.Object({
       category: Type.String({ description: "surgery | meeting | meeting_minutes | task | document | general" }),
       title: Type.String({ description: "Note title" }),
@@ -84,7 +84,7 @@ export function createCalendarEventTool(bridge: McpBridge) {
     label: "创建日历事件",
     description:
       "Create an event in Apple Calendar. Default duration: 1 hour. " +
-      "Do NOT use for surgery schedules — use create_reminder instead.",
+      "For surgery schedules: this is the primary action (no note, no reminder).",
     parameters: Type.Object({
       title: Type.String({ description: "Event title" }),
       start_time: Type.String({ description: "ISO-8601 datetime" }),
@@ -104,7 +104,7 @@ export function createReminderTool(bridge: McpBridge) {
     name: "claw_create_reminder",
     label: "创建提醒",
     description: "Create a reminder in Apple Reminders. Supports due date and priority (1-9). " +
-      "For surgery schedules: this is the primary action (no calendar event, no note).",
+      "Do NOT use for surgery schedules — use create_calendar_event instead.",
     parameters: Type.Object({
       title: Type.String({ description: "Reminder title" }),
       due_date: Type.Optional(Type.String({ description: "ISO-8601 datetime" })),

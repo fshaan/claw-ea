@@ -76,7 +76,7 @@ def register(mcp_instance, config: Config, ek_client):
             reminder_id: Apple Reminders identifier
             list: Reminder list name used
 
-        For surgery schedules: this is the primary action (no calendar event, no note).
+        Note: Do NOT use for surgery schedules — use create_calendar_event instead.
         """
         return await create_reminder_impl(
             title, due_date or None, priority or None, notes or None,

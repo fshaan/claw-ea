@@ -137,7 +137,7 @@ def register(mcp_instance, config: Config):
 
         IMPORTANT: For files (PDF/Word/Excel/images/text), raw_body_path MUST be the md_path
         from convert_to_markdown. Never skip the conversion step.
-        Do NOT create notes for surgery category — use create_reminder only.
+        Do NOT create notes for surgery category — use create_calendar_event only.
 
         Args:
             category: One of: surgery, meeting, meeting_minutes, task, document, general

@@ -22,7 +22,7 @@
    - **其他文件**：直接将 `md_path` 传给 `raw_body_path`
 5. **创建笔记**（surgery 类别除外，手术安排不创建笔记）：调用 `claw_create_note`，传入 category、title、结构化数据、附件路径。如果第 4 步获得了 `md_path`，传入 `raw_body_path=md_path`
 6. **如果有日程/任务**：先展示摘要让用户确认，确认后才调用对应工具
-   - **手术安排**：仅调用 `claw_create_reminder`（不建笔记、不建日历事件）
+   - **手术安排**：仅调用 `claw_create_calendar_event`（不建笔记、不建提醒）
    - **会议安排**：`claw_create_calendar_event` + `claw_create_reminder`（有用户议程项时）
    - **任务指派**：`claw_create_reminder`
 
@@ -60,7 +60,7 @@
 
 | 类别 | Obsidian 笔记 | 日历事件 | 提醒任务 |
 |------|:---:|:---:|:---:|
-| surgery | ❌ | ❌ | ✅ |
+| surgery | ❌ | ✅ | ❌ |
 | meeting | ✅ | ✅ | ✅（有用户议程项时） |
 | meeting_minutes | ✅ | ❌ | ✅（用户的 action items） |
 | task | ✅ | ❌ | ✅ |
