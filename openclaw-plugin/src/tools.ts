@@ -46,9 +46,29 @@ export function createObsidianNoteTool(bridge: McpBridge) {
       title: Type.String({ description: "Note title" }),
       content_data: Type.Any({ description: "Structured data extracted from the message (JSON object)" }),
       attachment_paths: Type.Optional(Type.Array(Type.String(), { description: "Paths from save_attachment" })),
+      raw_body_path: Type.Optional(Type.String({ description: "Path to Markdown file from convert_to_markdown. When set, file content becomes note body." })),
     }),
-    async execute(_id: string, params: { category: string; title: string; content_data: unknown; attachment_paths?: string[] }) {
+    async execute(_id: string, params: { category: string; title: string; content_data: unknown; attachment_paths?: string[]; raw_body_path?: string }) {
       const result = await bridge.callTool("create_obsidian_note", params);
+      return textResult(result);
+    },
+  };
+}
+
+export function createConvertToMarkdownTool(bridge: McpBridge) {
+  return {
+    name: "claw_convert_to_markdown",
+    label: "转换为Markdown",
+    description:
+      "Convert a file to Markdown and save as a temp file. " +
+      "Supports: PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), images (jpg/png/etc). " +
+      "Returns a temp file path — pass it to create_obsidian_note's raw_body_path parameter.",
+    parameters: Type.Object({
+      file_path: Type.String({ description: "Path to the file to convert" }),
+      hint: Type.Optional(Type.String({ description: 'Optional type hint, e.g. "academic" for academic PDF papers' })),
+    }),
+    async execute(_id: string, params: { file_path: string; hint?: string }) {
+      const result = await bridge.callTool("convert_to_markdown", params);
       return textResult(result);
     },
   };
