@@ -23,11 +23,13 @@ def main():
     from claw_ea.tools.attachment import register as reg_attachment
     from claw_ea.tools.obsidian import register as reg_obsidian
     from claw_ea.tools.ocr import register as reg_ocr
+    from claw_ea.tools.converter import register as reg_converter
     from claw_ea.tools.setup import register as reg_setup
 
     reg_attachment(mcp, config)
     reg_obsidian(mcp, config)
     reg_ocr(mcp)
+    reg_converter(mcp, config)
     reg_setup(mcp, ek_client)
 
     if ek_client:
