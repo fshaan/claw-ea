@@ -50,7 +50,7 @@ def is_usable(markdown: str) -> bool:
     total = 0
     invalid = 0
     for ch in stripped:
-        if ch == "\n":
+        if ch in "\n\r\t":
             continue
         total += 1
         cat = unicodedata.category(ch)
@@ -95,11 +95,11 @@ def convert_docling(file_path: Path, config_paths: dict[str, str], timeout: int 
     with tempfile.TemporaryDirectory(prefix="claw-ea-docling-") as out_dir:
         cmd = [exe, "--output", out_dir, str(file_path)]
         proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
             process_group=0,
         )
         try:
-            proc.wait(timeout=timeout)
+            stderr_data = proc.communicate(timeout=timeout)[1]
         except subprocess.TimeoutExpired:
             _kill_process_group(proc.pid)
             try:
@@ -109,7 +109,7 @@ def convert_docling(file_path: Path, config_paths: dict[str, str], timeout: int 
             raise TimeoutError(f"docling timed out after {timeout}s on {file_path}")
 
         if proc.returncode != 0:
-            stderr = proc.stderr.read().decode("utf-8", errors="replace") if proc.stderr else ""
+            stderr = stderr_data.decode("utf-8", errors="replace") if stderr_data else ""
             raise RuntimeError(f"docling failed (exit {proc.returncode}): {stderr[:500]}")
 
         stem = file_path.stem
@@ -217,11 +217,11 @@ def convert_mineru(file_path: Path, config_paths: dict[str, str], timeout: int =
     with tempfile.TemporaryDirectory(prefix="claw-ea-mineru-") as out_dir:
         cmd = [exe, "-p", str(file_path), "-o", out_dir, "-m", "auto"]
         proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
             process_group=0,
         )
         try:
-            proc.wait(timeout=timeout)
+            stderr_data = proc.communicate(timeout=timeout)[1]
         except subprocess.TimeoutExpired:
             _kill_process_group(proc.pid)
             try:
@@ -231,7 +231,7 @@ def convert_mineru(file_path: Path, config_paths: dict[str, str], timeout: int =
             raise TimeoutError(f"magic-pdf timed out after {timeout}s on {file_path}")
 
         if proc.returncode != 0:
-            stderr = proc.stderr.read().decode("utf-8", errors="replace") if proc.stderr else ""
+            stderr = stderr_data.decode("utf-8", errors="replace") if stderr_data else ""
             raise RuntimeError(f"magic-pdf failed (exit {proc.returncode}): {stderr[:500]}")
 
         stem = file_path.stem
@@ -265,9 +265,15 @@ def convert_vision_ocr(file_path: Path) -> str:
     return text
 
 
+def convert_passthrough(file_path: Path) -> str:
+    """Read plaintext file and return content as-is."""
+    return file_path.read_text(encoding="utf-8")
+
+
 # --- dispatch and routing ---
 
 _IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp", ".gif"}
+_PLAINTEXT_EXTENSIONS = {".txt", ".md", ".rst", ".log"}
 
 DEFAULT_ROUTING: dict[str, dict[str, list[str]]] = {
     ".pdf":  {"default": ["docling"]},
@@ -279,6 +285,8 @@ DEFAULT_ROUTING: dict[str, dict[str, list[str]]] = {
 }
 for _ext in _IMAGE_EXTENSIONS:
     DEFAULT_ROUTING[_ext] = {"default": ["lmstudio", "docling", "vision_ocr"]}
+for _ext in _PLAINTEXT_EXTENSIONS:
+    DEFAULT_ROUTING[_ext] = {"default": ["passthrough"]}
 
 
 def _get_available_check(name: str, config) -> bool:
@@ -293,6 +301,8 @@ def _get_available_check(name: str, config) -> bool:
         return lmstudio_is_available(config.lmstudio_endpoint)
     elif name == "vision_ocr":
         return vision_ocr_is_available()
+    elif name == "passthrough":
+        return True
     return False
 
 
@@ -312,6 +322,8 @@ def _run_converter(name: str, file_path: Path, config, timeout: int = 60) -> str
         )
     elif name == "vision_ocr":
         return convert_vision_ocr(file_path)
+    elif name == "passthrough":
+        return convert_passthrough(file_path)
     raise ValueError(f"Unknown converter: {name}")
 
 
@@ -352,7 +364,6 @@ def dispatch(file_path: Path, config, hint: str = "") -> ConversionResult:
     best_result = ""
     best_converter = available[0]
     fallback_used = False
-    tried_one = False
 
     for name in available:
         timeout = config.lmstudio_timeout if name == "lmstudio" else 60
@@ -361,10 +372,8 @@ def dispatch(file_path: Path, config, hint: str = "") -> ConversionResult:
         except Exception as e:
             logger.warning("Converter %s failed on %s: %s", name, file_path, e)
             fallback_used = True
-            tried_one = True
             continue
 
-        tried_one = True
         if is_usable(md):
             temp_path = _write_temp(md)
             return ConversionResult(

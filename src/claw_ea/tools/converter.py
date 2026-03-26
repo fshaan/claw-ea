@@ -31,7 +31,11 @@ def register(mcp_instance, config: Config):
     async def convert_to_markdown(file_path: str, hint: str = "") -> dict:
         """Convert a file to Markdown and save as a temp file.
 
-        Supports: PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), images (jpg/png/etc).
+        IMPORTANT: MUST be called for ALL files (including text) before creating Obsidian notes.
+        For PPT files: agent should read the converted markdown, summarize it, then pass the
+        summary to create_obsidian_note via content_data (do NOT use raw_body_path for PPT).
+
+        Supports: PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), CSV, HTML, images, plaintext.
         Automatically detects file type and selects the best converter.
         Result is written to a temp file (not returned as string) to avoid
         large text consuming agent context tokens.

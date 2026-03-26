@@ -40,7 +40,9 @@ export function createObsidianNoteTool(bridge: McpBridge) {
     label: "创建笔记",
     description:
       "Create an Obsidian note with YAML frontmatter. Deduplicates by content hash. " +
-      "Categories: surgery, meeting, meeting_minutes, task, document, general.",
+      "Categories: surgery, meeting, meeting_minutes, task, document, general. " +
+      "IMPORTANT: For files, raw_body_path MUST come from convert_to_markdown. " +
+      "Do NOT create notes for surgery category — use create_reminder only.",
     parameters: Type.Object({
       category: Type.String({ description: "surgery | meeting | meeting_minutes | task | document | general" }),
       title: Type.String({ description: "Note title" }),
@@ -61,7 +63,9 @@ export function createConvertToMarkdownTool(bridge: McpBridge) {
     label: "转换为Markdown",
     description:
       "Convert a file to Markdown and save as a temp file. " +
-      "Supports: PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), images (jpg/png/etc). " +
+      "IMPORTANT: MUST be called for ALL files before creating Obsidian notes. " +
+      "Supports: PDF, Word, Excel, PowerPoint, CSV, HTML, images, plaintext. " +
+      "For PPT: read the converted MD, summarize it, pass summary to create_note via content_data (not raw_body_path). " +
       "Returns a temp file path — pass it to create_obsidian_note's raw_body_path parameter.",
     parameters: Type.Object({
       file_path: Type.String({ description: "Path to the file to convert" }),
@@ -79,7 +83,8 @@ export function createCalendarEventTool(bridge: McpBridge) {
     name: "claw_create_calendar_event",
     label: "创建日历事件",
     description:
-      "Create an event in Apple Calendar. Default duration: 1 hour.",
+      "Create an event in Apple Calendar. Default duration: 1 hour. " +
+      "Do NOT use for surgery schedules — use create_reminder instead.",
     parameters: Type.Object({
       title: Type.String({ description: "Event title" }),
       start_time: Type.String({ description: "ISO-8601 datetime" }),
@@ -98,7 +103,8 @@ export function createReminderTool(bridge: McpBridge) {
   return {
     name: "claw_create_reminder",
     label: "创建提醒",
-    description: "Create a reminder in Apple Reminders. Supports due date and priority (1-9).",
+    description: "Create a reminder in Apple Reminders. Supports due date and priority (1-9). " +
+      "For surgery schedules: this is the primary action (no calendar event, no note).",
     parameters: Type.Object({
       title: Type.String({ description: "Reminder title" }),
       due_date: Type.Optional(Type.String({ description: "ISO-8601 datetime" })),

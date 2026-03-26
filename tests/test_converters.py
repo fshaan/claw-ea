@@ -14,6 +14,7 @@ from claw_ea.converters import (
     vision_ocr_is_available, convert_vision_ocr,
 )
 from claw_ea.converters import mineru_is_available, convert_mineru
+from claw_ea.converters import convert_passthrough
 from claw_ea.converters import dispatch, DEFAULT_ROUTING, ConversionResult
 from claw_ea.config import Config
 
@@ -69,7 +70,7 @@ class TestDocling:
         input_file.write_text("fake pdf")
 
         process = MagicMock()
-        process.wait.return_value = 0
+        process.communicate.return_value = (None, b"")
         process.returncode = 0
         process.pid = 12345
         mock_popen.return_value = process
@@ -96,7 +97,7 @@ class TestDocling:
         input_file.write_text("fake pdf")
 
         process = MagicMock()
-        process.wait.side_effect = subprocess.TimeoutExpired(cmd="docling", timeout=60)
+        process.communicate.side_effect = subprocess.TimeoutExpired(cmd="docling", timeout=60)
         process.pid = 12345
         mock_popen.return_value = process
 
@@ -185,7 +186,7 @@ class TestMineru:
         input_file.write_text("fake pdf")
 
         process = MagicMock()
-        process.wait.return_value = 0
+        process.communicate.return_value = (None, b"")
         process.returncode = 0
         process.pid = 12345
         mock_popen.return_value = process
@@ -275,6 +276,15 @@ class TestDispatch:
         assert result.converter_used == "markitdown"
         assert result.fallback_used is True
 
+    def test_dispatch_txt_passthrough(self, tmp_path):
+        cfg = self._make_config(tmp_path)
+        f = tmp_path / "readme.txt"
+        f.write_text("Plain text content here.", encoding="utf-8")
+        result = dispatch(f, cfg)
+        assert result.converter_used == "passthrough"
+        assert result.fallback_used is False
+        assert Path(result.temp_path).read_text(encoding="utf-8") == "Plain text content here."
+
     def test_unsupported_extension(self, tmp_path):
         cfg = self._make_config(tmp_path)
         f = tmp_path / "test.xyz"
@@ -340,6 +350,33 @@ class TestVisionOcr:
         result = convert_vision_ocr(img)
         assert "手术通知内容" in result
         mock_ocr.assert_called_once_with(img)
+
+
+class TestPassthrough:
+    def test_convert_passthrough_reads_content(self, tmp_path):
+        f = tmp_path / "notes.txt"
+        f.write_text("Hello, 世界！\n第二行", encoding="utf-8")
+        result = convert_passthrough(f)
+        assert result == "Hello, 世界！\n第二行"
+
+    def test_passthrough_is_always_available(self):
+        from claw_ea.converters import _get_available_check
+        # passthrough should always be available regardless of config
+        cfg = MagicMock()
+        assert _get_available_check("passthrough", cfg) is True
+
+    def test_passthrough_empty_file(self, tmp_path):
+        f = tmp_path / "empty.txt"
+        f.write_text("", encoding="utf-8")
+        result = convert_passthrough(f)
+        assert result == ""
+        assert is_usable(result) is False
+
+    def test_passthrough_non_utf8(self, tmp_path):
+        f = tmp_path / "binary.txt"
+        f.write_bytes(b"\x80\x81\x82\x83\xff\xfe")
+        with pytest.raises(UnicodeDecodeError):
+            convert_passthrough(f)
 
 
 @pytest.mark.converter

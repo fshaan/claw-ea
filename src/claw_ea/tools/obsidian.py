@@ -135,6 +135,10 @@ def register(mcp_instance, config: Config):
     ) -> dict:
         """Create an Obsidian note with YAML frontmatter. Deduplicates by content hash.
 
+        IMPORTANT: For files (PDF/Word/Excel/images/text), raw_body_path MUST be the md_path
+        from convert_to_markdown. Never skip the conversion step.
+        Do NOT create notes for surgery category — use create_reminder only.
+
         Args:
             category: One of: surgery, meeting, meeting_minutes, task, document, general
             title: Note title (e.g. "手术安排：张三 - 腹腔镜胆囊切除术")

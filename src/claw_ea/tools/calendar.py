@@ -82,6 +82,8 @@ def register(mcp_instance, config: Config, ek_client):
         Returns:
             event_id: Apple Calendar event identifier
             calendar: Calendar name used
+
+        Note: Do NOT use for surgery schedules — use create_reminder instead.
         """
         return await create_calendar_event_impl(
             title, start_time, end_time or None, location or None, notes or None,
