@@ -1,10 +1,12 @@
 # claw-ea
 
+[中文](README.md)
+
 Doctors are too busy to organize information.
 
-Surgery schedules in Feishu group chats, meeting notices on WeCom, files received via Telegram — glanced at once and buried under hundreds of messages. Important surgeries get forgotten, meeting times slip, files disappear.
+Surgery schedules buried in WeChat Work group chats, meeting notices on WeChat, files from various sources — glanced at once and lost under hundreds of messages. By the time you need them, you're scrolling through chat history, or you've simply forgotten.
 
-claw-ea fixes this: **forward the message to your AI assistant, everything else happens automatically.**
+I built claw-ea to solve my own problem: **forward work messages to an AI assistant, it handles archiving, calendar, and reminders for you.**
 
 ## Requirements
 
