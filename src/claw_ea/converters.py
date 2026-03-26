@@ -2,6 +2,7 @@
 
 import base64
 import json
+import logging
 import os
 import shutil
 import signal
@@ -10,8 +11,11 @@ import tempfile
 import unicodedata
 import urllib.error
 import urllib.request
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 try:
     from claw_ea.tools.ocr import _run_ocr, VISION_AVAILABLE
@@ -256,3 +260,143 @@ def convert_vision_ocr(file_path: Path) -> str:
         raise RuntimeError("macOS Vision framework not available")
     text = _run_ocr_from_file(file_path)
     return text
+
+
+# --- dispatch and routing ---
+
+_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp", ".gif"}
+
+DEFAULT_ROUTING: dict[str, dict[str, list[str]]] = {
+    ".pdf":  {"default": ["docling"]},
+    ".docx": {"default": ["docling", "markitdown"]},
+    ".pptx": {"default": ["docling", "markitdown"]},
+    ".xlsx": {"default": ["docling", "markitdown"]},
+    ".csv":  {"default": ["markitdown"]},
+    ".html": {"default": ["docling", "markitdown"]},
+}
+for _ext in _IMAGE_EXTENSIONS:
+    DEFAULT_ROUTING[_ext] = {"default": ["lmstudio", "docling", "vision_ocr"]}
+
+
+def _get_available_check(name: str, config) -> bool:
+    """Check if a converter is available."""
+    if name == "docling":
+        return docling_is_available(config.converter_paths)
+    elif name == "markitdown":
+        return markitdown_is_available(config.converter_paths)
+    elif name == "mineru":
+        return mineru_is_available(config.converter_paths)
+    elif name == "lmstudio":
+        return lmstudio_is_available(config.lmstudio_endpoint)
+    elif name == "vision_ocr":
+        return vision_ocr_is_available()
+    return False
+
+
+def _run_converter(name: str, file_path: Path, config, timeout: int = 60) -> str:
+    """Run a converter by name. Returns markdown string."""
+    if name == "docling":
+        return convert_docling(file_path, config.converter_paths, timeout=timeout)
+    elif name == "markitdown":
+        return convert_markitdown(file_path, config.converter_paths, timeout=timeout)
+    elif name == "mineru":
+        return convert_mineru(file_path, config.converter_paths, timeout=timeout)
+    elif name == "lmstudio":
+        return convert_lmstudio(
+            file_path, endpoint=config.lmstudio_endpoint,
+            api_key=config.lmstudio_api_key, model=config.lmstudio_model,
+            timeout=config.lmstudio_timeout,
+        )
+    elif name == "vision_ocr":
+        return convert_vision_ocr(file_path)
+    raise ValueError(f"Unknown converter: {name}")
+
+
+def _write_temp(content: str) -> str:
+    """Write content to a temp file. Returns path string."""
+    temp_dir = Path(tempfile.gettempdir())
+    temp_path = temp_dir / f"claw-ea-{uuid.uuid4().hex[:12]}.md"
+    temp_path.write_text(content, encoding="utf-8")
+    return str(temp_path)
+
+
+def dispatch(file_path: Path, config, hint: str = "") -> ConversionResult:
+    """Route file to converter chain, try each with fallback.
+
+    1. Look up chain by extension + hint
+    2. Filter out unavailable converters
+    3. Try each: convert → is_usable → return or fallback
+    4. All fail → return longest result + warning
+    """
+    ext = file_path.suffix.lower()
+
+    routing = config.converter_routing if config.converter_routing else DEFAULT_ROUTING
+    if ext in _IMAGE_EXTENSIONS and ext not in routing and ".image" in routing:
+        route_entry = routing[".image"]
+    elif ext in routing:
+        route_entry = routing[ext]
+    elif ext in DEFAULT_ROUTING:
+        route_entry = DEFAULT_ROUTING[ext]
+    else:
+        raise ValueError(f"Unsupported file extension: {ext}")
+
+    chain = route_entry.get(hint, route_entry["default"]) if isinstance(route_entry, dict) else route_entry
+
+    available = [name for name in chain if _get_available_check(name, config)]
+    if not available:
+        raise RuntimeError(f"No converters available for {ext} (chain: {chain})")
+
+    best_result = ""
+    best_converter = available[0]
+    fallback_used = False
+    tried_one = False
+
+    for name in available:
+        timeout = config.lmstudio_timeout if name == "lmstudio" else 60
+        try:
+            md = _run_converter(name, file_path, config, timeout=timeout)
+        except Exception as e:
+            logger.warning("Converter %s failed on %s: %s", name, file_path, e)
+            fallback_used = True
+            tried_one = True
+            continue
+
+        tried_one = True
+        if is_usable(md):
+            temp_path = _write_temp(md)
+            return ConversionResult(
+                temp_path=temp_path,
+                source_path=str(file_path),
+                converter_used=name,
+                fallback_used=fallback_used,
+            )
+        else:
+            logger.warning("Converter %s output not usable for %s", name, file_path)
+            fallback_used = True
+            if len(md) > len(best_result):
+                best_result = md
+                best_converter = name
+
+    logger.warning("All converters failed for %s, returning best effort (%s)", file_path, best_converter)
+    temp_path = _write_temp(best_result) if best_result else _write_temp(f"[Conversion failed for {file_path.name}]")
+    return ConversionResult(
+        temp_path=temp_path,
+        source_path=str(file_path),
+        converter_used=best_converter,
+        fallback_used=True,
+    )
+
+
+def cleanup_stale_temps(max_age_seconds: int = 3600) -> int:
+    """Remove claw-ea temp files older than max_age_seconds. Returns count removed."""
+    import time
+    temp_dir = Path(tempfile.gettempdir())
+    removed = 0
+    for f in temp_dir.glob("claw-ea-*.md"):
+        try:
+            if time.time() - f.stat().st_mtime > max_age_seconds:
+                f.unlink()
+                removed += 1
+        except OSError:
+            pass
+    return removed
