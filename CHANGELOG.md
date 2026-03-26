@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3.0] - 2026-03-26
+
+### Added
+- **Plaintext passthrough converter** — `.txt`, `.md`, `.rst`, `.log` files now go through the `convert_to_markdown` pipeline for uniform handling
+- **Behavioral constraints in tool descriptions** — critical workflow rules (must convert before note creation, surgery → reminder only, PPT → summarize) embedded directly in MCP tool descriptions, auto-enforced by any MCP client
+- **OpenClaw prompt template** (`openclaw-plugin/PROMPT_TEMPLATE.md`) — ready-to-use AGENTS.md + TOOLS.md snippets with recommended converter tool installation guide
+
+### Fixed
+- **Pipe deadlock in docling/mineru** — subprocess stdout changed from PIPE to DEVNULL with `communicate()`, preventing deadlock on large outputs
+- **Tab characters misclassified as garbled** — `is_usable()` now skips `\t` and `\r` alongside `\n`
+- **Dead code removed** — unused `tried_one` variable in `dispatch()`
+- 88 tests (up from 83)
+
 ## [0.1.2.0] - 2026-03-26
 
 ### Added
