@@ -294,6 +294,21 @@ class TestDispatch:
         assert result.converter_used == "docling"
 
     @patch("claw_ea.converters.docling_is_available", return_value=True)
+    @patch("claw_ea.converters.convert_docling", return_value="# Default route content")
+    @patch("claw_ea.converters.markitdown_is_available", return_value=True)
+    @patch("claw_ea.converters.convert_markitdown", return_value="# Markitdown content")
+    def test_partial_config_routing_falls_back_to_default(self, mock_mk, mock_mk_avail, mock_dl, mock_dl_avail, tmp_path):
+        """Config routing only covers .pdf — .docx should fall back to DEFAULT_ROUTING."""
+        cfg = self._make_config(tmp_path, routing={
+            ".pdf": {"default": ["markitdown"]},  # only pdf configured
+        })
+        f = tmp_path / "test.docx"
+        f.write_text("fake")
+        result = dispatch(f, cfg)
+        # .docx not in config routing, should fall back to DEFAULT_ROUTING: ["docling", "markitdown"]
+        assert result.converter_used == "docling"
+
+    @patch("claw_ea.converters.docling_is_available", return_value=True)
     @patch("claw_ea.converters.convert_docling", return_value="")
     @patch("claw_ea.converters.markitdown_is_available", return_value=True)
     @patch("claw_ea.converters.convert_markitdown", return_value="\x00\x01\x02")

@@ -79,6 +79,12 @@ def create_obsidian_note_impl(
         safe_category = "general"
 
     chash = _content_hash(content_data)
+    # Mix in raw_body content hash so different conversions aren't deduped
+    if raw_body_path:
+        raw_file = Path(raw_body_path)
+        if raw_file.exists():
+            body_hash = hashlib.sha256(raw_file.read_bytes()).hexdigest()[:8]
+            chash = hashlib.sha256(f"{chash}{body_hash}".encode()).hexdigest()[:8]
     today = date.today().isoformat()
     filename = f"{today}-{safe_category}-{chash}.md"
 
