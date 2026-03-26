@@ -96,7 +96,7 @@ def convert_docling(file_path: Path, config_paths: dict[str, str], timeout: int 
         cmd = [exe, "--output", out_dir, str(file_path)]
         proc = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            preexec_fn=os.setsid,
+            process_group=0,
         )
         try:
             proc.wait(timeout=timeout)
@@ -138,7 +138,7 @@ def convert_markitdown(file_path: Path, config_paths: dict[str, str], timeout: i
     cmd = [exe, str(file_path)]
     proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        preexec_fn=os.setsid,
+        process_group=0,
     )
     try:
         stdout, stderr = proc.communicate(timeout=timeout)
@@ -218,7 +218,7 @@ def convert_mineru(file_path: Path, config_paths: dict[str, str], timeout: int =
         cmd = [exe, "-p", str(file_path), "-o", out_dir, "-m", "auto"]
         proc = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            preexec_fn=os.setsid,
+            process_group=0,
         )
         try:
             proc.wait(timeout=timeout)
