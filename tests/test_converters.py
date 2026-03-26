@@ -13,6 +13,7 @@ from claw_ea.converters import (
     lmstudio_is_available, convert_lmstudio,
     vision_ocr_is_available, convert_vision_ocr,
 )
+from claw_ea.converters import mineru_is_available, convert_mineru
 
 
 class TestIsUsable:
@@ -164,6 +165,43 @@ class TestLmstudio:
                 img, endpoint="http://localhost:1234/v1",
                 api_key="test", model="glm-ocr", timeout=120
             )
+
+
+class TestMineru:
+    @patch("shutil.which", return_value="/usr/local/bin/magic-pdf")
+    def test_is_available(self, mock_which):
+        assert mineru_is_available({}) is True
+
+    @patch("shutil.which", return_value=None)
+    def test_not_available(self, mock_which):
+        assert mineru_is_available({}) is False
+
+    @patch("subprocess.Popen")
+    @patch("shutil.which", return_value="/usr/local/bin/magic-pdf")
+    def test_convert_success(self, mock_which, mock_popen, tmp_path):
+        input_file = tmp_path / "paper.pdf"
+        input_file.write_text("fake pdf")
+
+        process = MagicMock()
+        process.wait.return_value = 0
+        process.returncode = 0
+        process.pid = 12345
+        mock_popen.return_value = process
+
+        def simulate_output(*args, **kwargs):
+            cmd = args[0] if args else kwargs.get("args", [])
+            for i, arg in enumerate(cmd):
+                if arg == "-o":
+                    out_dir = Path(cmd[i + 1])
+                    md_dir = out_dir / "paper" / "auto"
+                    md_dir.mkdir(parents=True, exist_ok=True)
+                    (md_dir / "paper.md").write_text("# Academic Paper\n\n$E=mc^2$")
+                    break
+            return process
+
+        mock_popen.side_effect = simulate_output
+        result = convert_mineru(input_file, {}, timeout=120)
+        assert "Academic Paper" in result
 
 
 class TestVisionOcr:

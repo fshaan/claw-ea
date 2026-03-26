@@ -195,6 +195,49 @@ def convert_lmstudio(
         raise RuntimeError(f"LM Studio request failed: {e}") from e
 
 
+# --- mineru ---
+
+def mineru_is_available(config_paths: dict[str, str]) -> bool:
+    return _find_executable("magic-pdf", config_paths) is not None
+
+
+def convert_mineru(file_path: Path, config_paths: dict[str, str], timeout: int = 120) -> str:
+    """Convert PDF using MinerU (magic-pdf). Specialty: academic papers, complex formulas."""
+    exe = _find_executable("magic-pdf", config_paths)
+    if not exe:
+        raise RuntimeError("magic-pdf not found")
+
+    with tempfile.TemporaryDirectory(prefix="claw-ea-mineru-") as out_dir:
+        cmd = [exe, "-p", str(file_path), "-o", out_dir, "-m", "auto"]
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            preexec_fn=os.setsid,
+        )
+        try:
+            proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            _kill_process_group(proc.pid)
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
+            raise TimeoutError(f"magic-pdf timed out after {timeout}s on {file_path}")
+
+        if proc.returncode != 0:
+            stderr = proc.stderr.read().decode("utf-8", errors="replace") if proc.stderr else ""
+            raise RuntimeError(f"magic-pdf failed (exit {proc.returncode}): {stderr[:500]}")
+
+        stem = file_path.stem
+        md_path = Path(out_dir) / stem / "auto" / f"{stem}.md"
+        if not md_path.exists():
+            md_files = list(Path(out_dir).rglob("*.md"))
+            if not md_files:
+                raise RuntimeError(f"magic-pdf produced no .md output for {file_path}")
+            md_path = md_files[0]
+
+        return md_path.read_text(encoding="utf-8")
+
+
 # --- vision_ocr ---
 
 def _run_ocr_from_file(file_path: Path) -> str:
