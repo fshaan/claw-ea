@@ -1,3 +1,4 @@
+import json
 import subprocess
 from unittest.mock import patch, MagicMock
 from pathlib import Path
@@ -7,6 +8,10 @@ from claw_ea.converters import is_usable
 from claw_ea.converters import (
     docling_is_available, convert_docling,
     markitdown_is_available, convert_markitdown,
+)
+from claw_ea.converters import (
+    lmstudio_is_available, convert_lmstudio,
+    vision_ocr_is_available, convert_vision_ocr,
 )
 
 
@@ -119,3 +124,64 @@ class TestMarkitdown:
 
         result = convert_markitdown(input_file, {}, timeout=60)
         assert "# Converted from docx" in result
+
+
+class TestLmstudio:
+    def test_is_available_with_endpoint(self):
+        assert lmstudio_is_available("http://localhost:1234/v1") is True
+
+    def test_not_available_empty_endpoint(self):
+        assert lmstudio_is_available("") is False
+
+    @patch("urllib.request.urlopen")
+    def test_convert_success(self, mock_urlopen, tmp_path):
+        img = tmp_path / "test.png"
+        img.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
+
+        response_data = {
+            "choices": [{"message": {"content": "# OCR Result\n\n手术通知：张三"}}]
+        }
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps(response_data).encode()
+        mock_response.__enter__ = lambda s: s
+        mock_response.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_response
+
+        result = convert_lmstudio(
+            img, endpoint="http://localhost:1234/v1",
+            api_key="test", model="glm-ocr", timeout=120
+        )
+        assert "手术通知" in result
+
+    @patch("urllib.request.urlopen")
+    def test_convert_connection_error(self, mock_urlopen, tmp_path):
+        img = tmp_path / "test.png"
+        img.write_bytes(b"\x89PNG\r\n\x1a\n")
+
+        mock_urlopen.side_effect = ConnectionError("refused")
+        with pytest.raises(RuntimeError, match="LM Studio"):
+            convert_lmstudio(
+                img, endpoint="http://localhost:1234/v1",
+                api_key="test", model="glm-ocr", timeout=120
+            )
+
+
+class TestVisionOcr:
+    @patch("claw_ea.converters.VISION_AVAILABLE", True)
+    def test_is_available_on_macos(self):
+        assert vision_ocr_is_available() is True
+
+    @patch("claw_ea.converters.VISION_AVAILABLE", False)
+    def test_not_available_without_vision(self):
+        assert vision_ocr_is_available() is False
+
+    @patch("claw_ea.converters.VISION_AVAILABLE", True)
+    @patch("claw_ea.converters._run_ocr_from_file")
+    def test_convert_success(self, mock_ocr, tmp_path):
+        img = tmp_path / "test.png"
+        img.write_bytes(b"\x89PNG\r\n\x1a\n")
+        mock_ocr.return_value = "手术通知内容"
+
+        result = convert_vision_ocr(img)
+        assert "手术通知内容" in result
+        mock_ocr.assert_called_once_with(img)

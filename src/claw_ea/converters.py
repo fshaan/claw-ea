@@ -1,13 +1,25 @@
 """Markdown-first content pipeline: converter dispatch, routing, and quality check."""
 
+import base64
+import json
 import os
 import shutil
 import signal
 import subprocess
 import tempfile
 import unicodedata
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
+
+try:
+    from claw_ea.tools.ocr import _run_ocr, VISION_AVAILABLE
+except ImportError:
+    VISION_AVAILABLE = False
+
+    def _run_ocr(image_data: bytes) -> str:
+        raise RuntimeError("Vision framework not available")
 
 
 @dataclass
@@ -135,3 +147,69 @@ def convert_markitdown(file_path: Path, config_paths: dict[str, str], timeout: i
         raise RuntimeError(f"markitdown failed (exit {proc.returncode}): {stderr.decode('utf-8', errors='replace')[:500]}")
 
     return stdout.decode("utf-8")
+
+
+# --- lmstudio ---
+
+def lmstudio_is_available(endpoint: str) -> bool:
+    return bool(endpoint)
+
+
+def convert_lmstudio(
+    file_path: Path, endpoint: str, api_key: str, model: str, timeout: int = 120
+) -> str:
+    """Convert image to markdown via LM Studio vision API."""
+    image_data = file_path.read_bytes()
+    b64 = base64.b64encode(image_data).decode("ascii")
+
+    suffix = file_path.suffix.lower().lstrip(".")
+    mime_type = {
+        "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+        "bmp": "image/bmp", "tiff": "image/tiff", "webp": "image/webp",
+    }.get(suffix, "image/png")
+
+    payload = json.dumps({
+        "model": model or "default",
+        "messages": [{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "请将这张图片中的所有文字内容提取出来，用 Markdown 格式输出。保留原始结构和排版。"},
+                {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{b64}"}},
+            ],
+        }],
+        "max_tokens": 4096,
+    }).encode("utf-8")
+
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    req = urllib.request.Request(
+        f"{endpoint}/chat/completions", data=payload, headers=headers
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read())
+            return data["choices"][0]["message"]["content"]
+    except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
+        raise RuntimeError(f"LM Studio request failed: {e}") from e
+
+
+# --- vision_ocr ---
+
+def _run_ocr_from_file(file_path: Path) -> str:
+    """Read image file and run macOS Vision OCR."""
+    image_data = file_path.read_bytes()
+    return _run_ocr(image_data)
+
+
+def vision_ocr_is_available() -> bool:
+    return VISION_AVAILABLE
+
+
+def convert_vision_ocr(file_path: Path) -> str:
+    """Convert image to markdown using macOS Vision OCR (last-resort fallback)."""
+    if not VISION_AVAILABLE:
+        raise RuntimeError("macOS Vision framework not available")
+    text = _run_ocr_from_file(file_path)
+    return text
