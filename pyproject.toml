@@ -21,7 +21,10 @@ build-backend = "hatchling.build"
 packages = ["src/claw_ea"]
 
 [tool.pytest.ini_options]
-markers = ["macos: tests requiring macOS APIs (EventKit, Vision)"]
+markers = [
+    "macos: tests requiring macOS APIs (EventKit, Vision)",
+    "converter: tests requiring real converter CLIs (docling, markitdown)",
+]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 

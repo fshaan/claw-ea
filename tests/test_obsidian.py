@@ -77,3 +77,53 @@ def test_note_path_in_configured_folder(mock_config):
     result = create_obsidian_note_impl("general", "test", data, [], mock_config)
     note = Path(result["note_path"])
     assert str(mock_config.vault_path / mock_config.notes_folder) in str(note.parent)
+
+
+def test_raw_body_path_creates_note_with_file_content(mock_config, tmp_path):
+    """raw_body_path reads content from file and uses it as note body."""
+    md_file = tmp_path / "converted.md"
+    md_file.write_text("# Converted Content\n\nThis is the converted markdown.", encoding="utf-8")
+
+    data = {"title": "test doc", "summary": "converted"}
+    result = create_obsidian_note_impl(
+        "document", "test doc", data, ["/path/to/original.pdf"], mock_config,
+        raw_body_path=str(md_file),
+    )
+    content = Path(result["note_path"]).read_text(encoding="utf-8")
+    assert "# Converted Content" in content
+    assert "This is the converted markdown." in content
+    assert "category: document" in content  # frontmatter still generated
+    assert "[[original.pdf]]" in content  # original file wikilink
+
+
+def test_raw_body_path_deletes_temp_file(mock_config, tmp_path):
+    """Temp file is deleted after reading."""
+    md_file = tmp_path / "converted.md"
+    md_file.write_text("# Content", encoding="utf-8")
+    assert md_file.exists()
+
+    create_obsidian_note_impl(
+        "document", "test", {"title": "test"}, [], mock_config,
+        raw_body_path=str(md_file),
+    )
+    assert not md_file.exists()
+
+
+def test_raw_body_path_not_found(mock_config):
+    """Missing raw_body_path file returns error."""
+    result = create_obsidian_note_impl(
+        "document", "test", {"title": "test"}, [], mock_config,
+        raw_body_path="/nonexistent/file.md",
+    )
+    assert "error" in result
+
+
+def test_raw_body_path_empty_string_uses_template(mock_config):
+    """Empty raw_body_path (default) uses normal template rendering."""
+    data = {"title": "test", "summary": "hello"}
+    result = create_obsidian_note_impl(
+        "general", "test", data, [], mock_config,
+        raw_body_path="",
+    )
+    content = Path(result["note_path"]).read_text(encoding="utf-8")
+    assert "## 摘要" in content  # template-rendered section

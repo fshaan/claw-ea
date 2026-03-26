@@ -55,3 +55,65 @@ def test_attachments_folder_alias(tmp_path):
     }))
     config = load_config(config_file)
     assert config.attachments_path == att_dir
+
+
+def test_parse_converters_config(tmp_path):
+    """Converters config section is parsed into Config fields."""
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("""
+user:
+  name: 张医生
+obsidian:
+  vault_path: /tmp/vault
+  notes_folder: Inbox
+apple:
+  calendar_name: 工作
+  reminder_list: OpenClaw
+converters:
+  lmstudio:
+    endpoint: http://localhost:1234/v1
+    api_key: test-key
+    model: glm-ocr
+    timeout: 90
+  paths:
+    docling: /usr/local/bin/docling
+  routing:
+    pdf:
+      default: [docling]
+      academic: [mineru, docling]
+    image:
+      default: [lmstudio, vision_ocr]
+""", encoding="utf-8")
+    from claw_ea.config import load_config
+    cfg = load_config(config_file)
+    assert cfg.lmstudio_endpoint == "http://localhost:1234/v1"
+    assert cfg.lmstudio_api_key == "test-key"
+    assert cfg.lmstudio_model == "glm-ocr"
+    assert cfg.lmstudio_timeout == 90
+    assert cfg.converter_paths == {"docling": "/usr/local/bin/docling"}
+    assert cfg.converter_routing[".pdf"]["default"] == ["docling"]
+    assert cfg.converter_routing[".pdf"]["academic"] == ["mineru", "docling"]
+    assert cfg.converter_routing[".image"]["default"] == ["lmstudio", "vision_ocr"]
+
+
+def test_parse_config_without_converters(tmp_path):
+    """Missing converters section gives empty defaults."""
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("""
+user:
+  name: 张医生
+obsidian:
+  vault_path: /tmp/vault
+  notes_folder: Inbox
+apple:
+  calendar_name: 工作
+  reminder_list: OpenClaw
+""", encoding="utf-8")
+    from claw_ea.config import load_config
+    cfg = load_config(config_file)
+    assert cfg.converter_paths == {}
+    assert cfg.converter_routing == {}
+    assert cfg.lmstudio_endpoint == ""
+    assert cfg.lmstudio_api_key == ""
+    assert cfg.lmstudio_model == ""
+    assert cfg.lmstudio_timeout == 120

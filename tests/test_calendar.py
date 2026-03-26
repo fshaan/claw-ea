@@ -39,10 +39,13 @@ def mock_ek_client():
 
 @pytest.mark.asyncio
 async def test_create_event_basic(mock_ek_client):
-    with patch("claw_ea.tools.calendar.EKEvent") as MockEvent:
+    with patch("claw_ea.tools.calendar.EKEvent") as MockEvent, \
+         patch("claw_ea.tools.calendar.EKAlarm") as MockAlarm:
         mock_event = MagicMock()
         mock_event.eventIdentifier.return_value = "test-id-123"
         MockEvent.eventWithEventStore_.return_value = mock_event
+        mock_alarm = MagicMock()
+        MockAlarm.alarmWithRelativeOffset_.return_value = mock_alarm
 
         result = await create_calendar_event_impl(
             title="[主刀] 腹腔镜胆囊切除术 - 张三",
@@ -52,6 +55,9 @@ async def test_create_event_basic(mock_ek_client):
         )
         assert result["event_id"] == "test-id-123"
         assert result["calendar"] == "工作"
+        # Verify 15-minute alarm was added
+        MockAlarm.alarmWithRelativeOffset_.assert_called_once_with(-900)
+        mock_event.addAlarm_.assert_called_once_with(mock_alarm)
 
 
 @pytest.mark.asyncio
