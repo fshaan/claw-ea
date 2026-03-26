@@ -64,8 +64,15 @@ def _render_body(category: str, title: str, content_data: dict, attachment_paths
 def create_obsidian_note_impl(
     category: str, title: str, content_data: dict,
     attachment_paths: list[str], config: Config,
+    raw_body_path: str = "",
 ) -> dict:
     """Core logic for create_obsidian_note."""
+    # Handle raw_body_path: validate file exists
+    if raw_body_path:
+        raw_file = Path(raw_body_path)
+        if not raw_file.exists():
+            return {"error": f"raw_body_path file not found: {raw_body_path}"}
+
     # Sanitize category to prevent path traversal
     safe_category = "".join(c for c in category if c.isalnum() or c in "-_")
     if not safe_category:
@@ -80,10 +87,31 @@ def create_obsidian_note_impl(
     note_path = notes_dir / filename
 
     if note_path.exists():
+        if raw_body_path:
+            try:
+                Path(raw_body_path).unlink(missing_ok=True)
+            except OSError:
+                pass
         return {"note_path": str(note_path), "already_existed": True}
 
     frontmatter = _render_frontmatter(category, content_data)
-    body = _render_body(category, title, content_data, attachment_paths)
+
+    if raw_body_path:
+        raw_file = Path(raw_body_path)
+        body = raw_file.read_text(encoding="utf-8")
+        # Append original file references
+        if attachment_paths:
+            body += "\n\n## 原始文件\n"
+            for p in attachment_paths:
+                body += f"- [[{Path(p).name}]]\n"
+        # Delete temp file after reading
+        try:
+            raw_file.unlink(missing_ok=True)
+        except OSError:
+            pass
+    else:
+        body = _render_body(category, title, content_data, attachment_paths)
+
     content = f"---\n{frontmatter}---\n\n{body}"
 
     note_path.write_text(content, encoding="utf-8")
@@ -95,7 +123,9 @@ def register(mcp_instance, config: Config):
 
     @mcp_instance.tool()
     async def create_obsidian_note(
-        category: str, title: str, content_data: dict, attachment_paths: list[str] | None = None,
+        category: str, title: str, content_data: dict,
+        attachment_paths: list[str] | None = None,
+        raw_body_path: str = "",
     ) -> dict:
         """Create an Obsidian note with YAML frontmatter. Deduplicates by content hash.
 
@@ -107,11 +137,16 @@ def register(mcp_instance, config: Config):
                 Surgery: patient, procedure, surgeon.
                 Meeting: attendees, meeting_title.
             attachment_paths: Absolute paths to saved attachment files (from save_attachment)
+            raw_body_path: Path to a Markdown file whose content will be used as note body.
+                Typically the md_path returned by convert_to_markdown.
+                When set, the note body comes from this file instead of template rendering.
+                The file is deleted after reading.
 
         Returns:
             note_path: Absolute path to the created note
             already_existed: True if a note with identical content already exists
         """
         return create_obsidian_note_impl(
-            category, title, content_data, attachment_paths or [], config
+            category, title, content_data, attachment_paths or [], config,
+            raw_body_path=raw_body_path,
         )
