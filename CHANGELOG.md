@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4.0] - 2026-03-27
+
+### Added
+- **Delete calendar events** — `delete_calendar_event` tool removes events by ID, with empty-ID validation and user confirmation required
+- **Delete reminders** — `delete_reminder` tool removes reminders by ID, with type-safety check (`isinstance` guard prevents accidentally deleting calendar events via reminder API)
+- OpenClaw plugin registers 11 tools (up from 9)
+- 96 tests (up from 93)
+
 ## [0.1.3.1] - 2026-03-26
 
 ### Changed

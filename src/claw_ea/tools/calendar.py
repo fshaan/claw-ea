@@ -66,8 +66,29 @@ async def create_calendar_event_impl(
     }
 
 
+async def delete_calendar_event_impl(event_id: str, *, ek_client) -> dict:
+    """Core logic for delete_calendar_event."""
+    if not event_id or not event_id.strip():
+        raise ValueError("event_id must be a non-empty string")
+
+    await ek_client.ensure_calendar_access()
+
+    event = ek_client.store.eventWithIdentifier_(event_id)
+    if event is None:
+        raise ValueError(f"Event '{event_id}' not found")
+
+    title = event.title()
+    success, error = ek_client.store.removeEvent_span_commit_error_(
+        event, EKSpanThisEvent, True, None
+    )
+    if not success:
+        raise RuntimeError(f"Failed to delete event: {error}")
+
+    return {"deleted": True, "event_id": event_id, "title": title}
+
+
 def register(mcp_instance, config: Config, ek_client):
-    """Register create_calendar_event tool."""
+    """Register calendar tools."""
 
     @mcp_instance.tool()
     async def create_calendar_event(
@@ -92,4 +113,22 @@ def register(mcp_instance, config: Config, ek_client):
         return await create_calendar_event_impl(
             title, start_time, end_time or None, location or None, notes or None,
             ek_client=ek_client, calendar_name=config.calendar_name,
+        )
+
+    @mcp_instance.tool()
+    async def delete_calendar_event(event_id: str) -> dict:
+        """Delete an event from Apple Calendar.
+
+        Args:
+            event_id: The event identifier returned by create_calendar_event.
+
+        Returns:
+            deleted: True if successful
+            event_id: The deleted event's identifier
+            title: The deleted event's title (for confirmation)
+
+        Agent should confirm with user before calling this tool.
+        """
+        return await delete_calendar_event_impl(
+            event_id, ek_client=ek_client,
         )

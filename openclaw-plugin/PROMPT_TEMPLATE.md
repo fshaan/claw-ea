@@ -51,7 +51,7 @@
 
 **用途**：自动处理社媒通道收到的工作消息 → 归档到 Obsidian + 日历 + 提醒
 
-**9 个工具**：
+**11 个工具**：
 
 | 工具 | 用途 | 自动/需确认 |
 |------|------|-------------|
@@ -59,7 +59,9 @@
 | `claw_convert_to_markdown` | **非文本文件必须调用**：将文件转为 Markdown 临时文件，返回 `md_path` | 自动 |
 | `claw_create_note` | 创建带 frontmatter 的 Obsidian 笔记 | 自动 |
 | `claw_create_calendar_event` | 创建 Apple Calendar 事件 | **需用户确认** |
+| `claw_delete_calendar_event` | 按 event_id 删除日历事件 | **需用户确认** |
 | `claw_create_reminder` | 创建 Apple Reminders 提醒 | **需用户确认** |
+| `claw_delete_reminder` | 按 reminder_id 删除提醒 | **需用户确认** |
 | `claw_ocr_image` | 图片 OCR（中英文） | 自动（仅当你不能直接看图时用） |
 | `claw_detect_vault` | 扫描系统中的 Obsidian vault | 配置时用 |
 | `claw_list_calendars` | 列出日历和提醒列表 | 配置时用 |

@@ -12,7 +12,7 @@ claw-ea is a Python MCP (Model Context Protocol) server that helps medical profe
 
 The MCP server only provides **side-effect tools** — tools that write files, call system APIs, or read system state. All "understanding" tasks (message classification, image comprehension, approval dialog formatting) are handled by the calling agent's LLM, NOT by our tools.
 
-### MCP Tools (9 total)
+### MCP Tools (11 total)
 
 **Core workflow** (called by agent after it classifies the message):
 - `ocr_image` — Local OCR only (macOS Vision framework). Agent's multimodal LLM handles image understanding directly; this tool is the fallback when the LLM lacks vision.
@@ -20,7 +20,9 @@ The MCP server only provides **side-effect tools** — tools that write files, c
 - `convert_to_markdown` — Converts files (PDF, docx, pptx, xlsx, CSV, HTML, images, plaintext) to Markdown via configurable converter chains (docling → markitdown → mineru → lmstudio → vision_ocr → passthrough). Returns temp file path for `create_obsidian_note`'s `raw_body_path`. Fallback: if primary converter fails or output is garbled, automatically tries the next in chain. Plaintext files (.txt, .md, .rst, .log) use a passthrough converter.
 - `create_obsidian_note` — Creates Markdown note with YAML frontmatter in Obsidian vault. Supports `raw_body_path` to embed converted Markdown content. Dedup via content hash (first 8 chars in filename); returns existing path if duplicate.
 - `create_calendar_event` — Creates event in Apple Calendar via pyobjc EventKit. Returns event ID.
+- `delete_calendar_event` — Deletes an event from Apple Calendar by event ID. Agent should confirm with user first.
 - `create_reminder` — Creates reminder in Apple Reminders via pyobjc EventKit. Returns reminder ID.
+- `delete_reminder` — Deletes a reminder from Apple Reminders by reminder ID. Agent should confirm with user first.
 
 **Configuration** (used during setup wizard, orchestrated by agent):
 - `detect_obsidian_vault` — Scans common paths for Obsidian vaults.
@@ -29,7 +31,7 @@ The MCP server only provides **side-effect tools** — tools that write files, c
 
 ### Approval Flow
 
-Obsidian notes and attachments are written automatically (low risk). Calendar events and reminders require user confirmation first — the agent shows a summary and waits for approval before calling `create_calendar_event` / `create_reminder`.
+Obsidian notes and attachments are written automatically (low risk). Calendar events and reminders require user confirmation first — the agent shows a summary and waits for approval before calling `create_calendar_event` / `create_reminder`. Deleting events and reminders also requires user confirmation before calling `delete_calendar_event` / `delete_reminder`.
 
 ### Data Flow
 

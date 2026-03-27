@@ -57,7 +57,7 @@ claw-ea is a Python MCP (Model Context Protocol) Server connected to OpenClaw as
 - **Fully local processing** — medical information is sensitive, nothing is uploaded to third-party services
 - **pyobjc EventKit** (not AppleScript) — avoids Chinese character escaping issues, returns proper event IDs and error info
 
-9 MCP Tools: `save_attachment`, `convert_to_markdown`, `create_obsidian_note`, `create_calendar_event`, `create_reminder`, `ocr_image`, `detect_obsidian_vault`, `list_apple_calendars`, `save_config`
+11 MCP Tools: `save_attachment`, `convert_to_markdown`, `create_obsidian_note`, `create_calendar_event`, `delete_calendar_event`, `create_reminder`, `delete_reminder`, `ocr_image`, `detect_obsidian_vault`, `list_apple_calendars`, `save_config`
 
 ## Quick start
 

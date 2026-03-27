@@ -57,8 +57,32 @@ async def create_reminder_impl(
     }
 
 
+async def delete_reminder_impl(reminder_id: str, *, ek_client) -> dict:
+    """Core logic for delete_reminder."""
+    if not reminder_id or not reminder_id.strip():
+        raise ValueError("reminder_id must be a non-empty string")
+
+    await ek_client.ensure_reminder_access()
+
+    reminder = ek_client.store.calendarItemWithIdentifier_(reminder_id)
+    if reminder is None:
+        raise ValueError(f"Reminder '{reminder_id}' not found")
+
+    if not isinstance(reminder, EKReminder):
+        raise ValueError(f"ID '{reminder_id}' is not a reminder")
+
+    title = reminder.title()
+    success, error = ek_client.store.removeReminder_commit_error_(
+        reminder, True, None
+    )
+    if not success:
+        raise RuntimeError(f"Failed to delete reminder: {error}")
+
+    return {"deleted": True, "reminder_id": reminder_id, "title": title}
+
+
 def register(mcp_instance, config: Config, ek_client):
-    """Register create_reminder tool."""
+    """Register reminder tools."""
 
     @mcp_instance.tool()
     async def create_reminder(
@@ -81,4 +105,22 @@ def register(mcp_instance, config: Config, ek_client):
         return await create_reminder_impl(
             title, due_date or None, priority or None, notes or None,
             ek_client=ek_client, list_name=config.reminder_list,
+        )
+
+    @mcp_instance.tool()
+    async def delete_reminder(reminder_id: str) -> dict:
+        """Delete a reminder from Apple Reminders.
+
+        Args:
+            reminder_id: The reminder identifier returned by create_reminder.
+
+        Returns:
+            deleted: True if successful
+            reminder_id: The deleted reminder's identifier
+            title: The deleted reminder's title (for confirmation)
+
+        Agent should confirm with user before calling this tool.
+        """
+        return await delete_reminder_impl(
+            reminder_id, ek_client=ek_client,
         )
