@@ -34,6 +34,7 @@
    - **手术安排**：仅调用 `claw_create_calendar_event`（不建笔记、不建提醒）
    - **会议安排**：`claw_create_calendar_event` + `claw_create_reminder`（有用户议程项时）
    - **任务指派**：`claw_create_reminder`
+7. **如果用户要求删除已创建的日历事件或提醒**：先确认要删除的条目，然后调用 `claw_delete_calendar_event(event_id=...)` 或 `claw_delete_reminder(reminder_id=...)`。event_id/reminder_id 来自创建时的返回值。
 
 **多条消息关联**：如果用户连续发送多条消息属于同一个事件，合并后一起处理。不同事件按内容语义分开处理。
 
