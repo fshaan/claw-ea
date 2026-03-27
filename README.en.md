@@ -108,11 +108,14 @@ I need you to install the claw-ea plugin. Here are the steps:
    calendar name, and reminder list. Use the detect_obsidian_vault and
    list_apple_calendars tools to discover available options.
 
-5. Configure agent behavior — add a "claw-ea" section to
-   ~/.openclaw/workspace/AGENTS.md (trigger rules: when to use claw-ea tools)
-   and ~/.openclaw/workspace/TOOLS.md (tool reference: categories, user name
-   matching, approval flow). See CLAUDE.md "Agent Prompt Configuration" for
-   the full template.
+5. ⛔ Configure agent behavior (REQUIRED — do not skip):
+   Read openclaw-plugin/PROMPT_TEMPLATE.md in the project directory.
+   Write the AGENTS.md snippet into ~/.openclaw/workspace/AGENTS.md
+   and the TOOLS.md snippet into ~/.openclaw/workspace/TOOLS.md.
+   Replace existing claw-ea sections if present, otherwise append.
+   This defines message classification rules and tool call ordering.
+   Skipping this step causes incorrect workflow (e.g., surgery notes
+   created when they shouldn't be, files not converted to Markdown).
 
 6. Restart OpenClaw: openclaw restart
 ```
@@ -140,7 +143,7 @@ I need you to install the claw-ea plugin. Here are the steps:
 
 4. Create `~/.claw-ea/config.yaml` (see [Config](#config) below)
 
-5. Configure agent behavior — add claw-ea sections to `~/.openclaw/workspace/AGENTS.md` and `TOOLS.md` (see [CLAUDE.md](CLAUDE.md#agent-prompt-configuration) for templates)
+5. **⛔ Configure agent behavior (REQUIRED)** — read `openclaw-plugin/PROMPT_TEMPLATE.md`, write its two snippets into `~/.openclaw/workspace/AGENTS.md` and `TOOLS.md` (replace existing claw-ea sections or append). Skipping causes incorrect workflow
 
 6. Restart: `openclaw restart`
 

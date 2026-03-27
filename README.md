@@ -107,8 +107,12 @@ claw-ea 作为原生插件接入 OpenClaw，`openclaw-plugin/` 目录里是 Type
    然后创建 ~/.claw-ea/config.yaml，填用户名、vault 路径、日历名、提醒列表。
    用 detect_obsidian_vault 和 list_apple_calendars 工具查可用选项。
 
-5. 配 agent 行为 — 参考 openclaw-plugin/PROMPT_TEMPLATE.md，
-   往 ~/.openclaw/workspace/AGENTS.md 和 TOOLS.md 里加对应内容。
+5. ⛔ 配 agent 行为（必做，不可跳过）：
+   读取项目目录下的 openclaw-plugin/PROMPT_TEMPLATE.md，
+   将其中的 AGENTS.md 片段完整写入 ~/.openclaw/workspace/AGENTS.md，
+   将 TOOLS.md 片段完整写入 ~/.openclaw/workspace/TOOLS.md。
+   如果已有 claw-ea 段落则替换，没有则追加。
+   这一步定义了消息分类规则和工具调用顺序，跳过会导致工作流错误。
 
 6. 重启 OpenClaw: openclaw restart
 ```
@@ -133,7 +137,7 @@ claw-ea 作为原生插件接入 OpenClaw，`openclaw-plugin/` 目录里是 Type
 
 4. 写配置文件 `~/.claw-ea/config.yaml`（见[配置](#配置)）
 
-5. 配 agent 行为 — 照着 `openclaw-plugin/PROMPT_TEMPLATE.md` 往 workspace 的 `AGENTS.md` 和 `TOOLS.md` 里加内容
+5. **⛔ 配 agent 行为（必做）** — 读取 `openclaw-plugin/PROMPT_TEMPLATE.md`，将其中两个片段分别写入 `~/.openclaw/workspace/AGENTS.md` 和 `TOOLS.md`（已有则替换，没有则追加）。跳过这步会导致分类规则缺失
 
 6. `openclaw restart`
 

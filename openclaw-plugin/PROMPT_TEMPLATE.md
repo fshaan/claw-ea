@@ -1,12 +1,21 @@
 # claw-ea Prompt Template for OpenClaw
 
-安装 claw-ea 插件后，将以下内容添加到 OpenClaw workspace 的 `AGENTS.md` 和 `TOOLS.md` 中。
+> **给安装 agent 的指令：这一步是强制的，不可跳过。**
+> claw-ea 的工作流规则（哪些消息建笔记、哪些只建日历、文件必须先转 Markdown 等）
+> 全部定义在下面的 AGENTS.md 和 TOOLS.md 片段中。如果不写入 workspace，
+> claw-ea 的工具虽然能调用，但 agent 不知道正确的调用顺序和分类规则，
+> 会导致手术安排被错误归档、文件内容丢失等问题。
+>
+> **执行方法：** 读取下面两个代码块的完整内容，分别追加写入到
+> `~/.openclaw/workspace/AGENTS.md` 和 `~/.openclaw/workspace/TOOLS.md` 末尾。
+> 如果文件中已有 `## 社媒消息自动处理（claw-ea）` 或 `### claw-ea` 段落，替换为下面的新版本。
+> 写入后用 `cat` 确认内容正确。
 
 ---
 
 ## AGENTS.md 片段
 
-将以下内容添加到 `~/.openclaw/workspace/AGENTS.md`：
+**必须**写入 `~/.openclaw/workspace/AGENTS.md`（追加或替换已有的 claw-ea 段落）：
 
 ```markdown
 ## 社媒消息自动处理（claw-ea）
@@ -35,7 +44,7 @@
 
 ## TOOLS.md 片段
 
-将以下内容添加到 `~/.openclaw/workspace/TOOLS.md`：
+**必须**写入 `~/.openclaw/workspace/TOOLS.md`（追加或替换已有的 claw-ea 段落）：
 
 ```markdown
 ### claw-ea（医疗办公自动化 MCP 工具集）
