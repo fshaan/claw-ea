@@ -99,15 +99,15 @@ claw-ea 作为原生插件接入 OpenClaw，`openclaw-plugin/` 目录里是 Type
    "claw-ea": {
      "source": "path",
      "installPath": "<HOME>/.openclaw/extensions/claw-ea",
-     "version": "0.1.4.0"
+     "version": "<VERSION>"
    }
-   <HOME> 换成实际路径。
+   <HOME> 换成实际路径。<VERSION> 读取项目根目录的 VERSION 文件内容（如 `cat VERSION`）。
 
 4. 建配置目录 mkdir -p ~/.claw-ea，
    然后创建 ~/.claw-ea/config.yaml，填用户名、vault 路径、日历名、提醒列表。
    用 detect_obsidian_vault 和 list_apple_calendars 工具查可用选项。
 
-5. ⛔ 配 agent 行为（必做，不可跳过）：
+5. ⛔ 配 agent 行为（必做，不可跳过，更新时也要重新执行）：
    读取项目目录下的 openclaw-plugin/PROMPT_TEMPLATE.md，
    将其中的 AGENTS.md 片段完整写入 ~/.openclaw/workspace/AGENTS.md，
    将 TOOLS.md 片段完整写入 ~/.openclaw/workspace/TOOLS.md。
@@ -117,6 +117,18 @@ claw-ea 作为原生插件接入 OpenClaw，`openclaw-plugin/` 目录里是 Type
 6. 重启 OpenClaw: openclaw restart
 ```
 <!-- END AGENT INSTALL INSTRUCTIONS -->
+
+### 更新已有安装
+
+```
+1. cd <项目目录> && git pull
+2. 复制插件文件：
+   cp openclaw-plugin/index.ts ~/.openclaw/extensions/claw-ea/index.ts
+   cp openclaw-plugin/src/tools.ts ~/.openclaw/extensions/claw-ea/src/tools.ts
+3. 更新 ~/.openclaw/openclaw.json 中 plugins.installs.claw-ea.version 为 VERSION 文件的内容
+4. 重新执行上面的步骤 5（读 PROMPT_TEMPLATE.md，更新 AGENTS.md 和 TOOLS.md）
+5. 重启 OpenClaw: openclaw restart
+```
 
 ### 手动装
 

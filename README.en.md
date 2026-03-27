@@ -99,16 +99,16 @@ I need you to install the claw-ea plugin. Here are the steps:
    "claw-ea": {
      "source": "path",
      "installPath": "<HOME>/.openclaw/extensions/claw-ea",
-     "version": "0.1.4.0"
+     "version": "<VERSION>"
    }
-   Replace <HOME> with the actual home directory path.
+   Replace <HOME> with the actual home directory path. <VERSION> is the content of the VERSION file (e.g. `cat VERSION`).
 
 4. Create config — run: mkdir -p ~/.claw-ea
    Then create ~/.claw-ea/config.yaml with user name, Obsidian vault path,
    calendar name, and reminder list. Use the detect_obsidian_vault and
    list_apple_calendars tools to discover available options.
 
-5. ⛔ Configure agent behavior (REQUIRED — do not skip):
+5. ⛔ Configure agent behavior (REQUIRED — do not skip, also re-run on updates):
    Read openclaw-plugin/PROMPT_TEMPLATE.md in the project directory.
    Write the AGENTS.md snippet into ~/.openclaw/workspace/AGENTS.md
    and the TOOLS.md snippet into ~/.openclaw/workspace/TOOLS.md.
@@ -120,6 +120,18 @@ I need you to install the claw-ea plugin. Here are the steps:
 6. Restart OpenClaw: openclaw restart
 ```
 <!-- END AGENT INSTALL INSTRUCTIONS -->
+
+### Updating an existing installation
+
+```
+1. cd <project-dir> && git pull
+2. Copy plugin files:
+   cp openclaw-plugin/index.ts ~/.openclaw/extensions/claw-ea/index.ts
+   cp openclaw-plugin/src/tools.ts ~/.openclaw/extensions/claw-ea/src/tools.ts
+3. Update plugins.installs.claw-ea.version in ~/.openclaw/openclaw.json to match the VERSION file
+4. Re-run step 5 above (read PROMPT_TEMPLATE.md, update AGENTS.md and TOOLS.md)
+5. Restart OpenClaw: openclaw restart
+```
 
 ### Manual installation
 
