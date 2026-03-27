@@ -118,6 +118,40 @@ export function createReminderTool(bridge: McpBridge) {
   };
 }
 
+export function createDeleteCalendarEventTool(bridge: McpBridge) {
+  return {
+    name: "claw_delete_calendar_event",
+    label: "删除日历事件",
+    description:
+      "Delete an event from Apple Calendar by event ID. " +
+      "Agent should confirm with user before calling this tool.",
+    parameters: Type.Object({
+      event_id: Type.String({ description: "Event identifier returned by create_calendar_event" }),
+    }),
+    async execute(_id: string, params: { event_id: string }) {
+      const result = await bridge.callTool("delete_calendar_event", params);
+      return textResult(result);
+    },
+  };
+}
+
+export function createDeleteReminderTool(bridge: McpBridge) {
+  return {
+    name: "claw_delete_reminder",
+    label: "删除提醒",
+    description:
+      "Delete a reminder from Apple Reminders by reminder ID. " +
+      "Agent should confirm with user before calling this tool.",
+    parameters: Type.Object({
+      reminder_id: Type.String({ description: "Reminder identifier returned by create_reminder" }),
+    }),
+    async execute(_id: string, params: { reminder_id: string }) {
+      const result = await bridge.callTool("delete_reminder", params);
+      return textResult(result);
+    },
+  };
+}
+
 export function createOcrImageTool(bridge: McpBridge) {
   return {
     name: "claw_ocr_image",

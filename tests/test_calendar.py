@@ -22,7 +22,7 @@ def test_find_calendar_returns_none_when_missing():
         assert client.find_calendar("nonexistent") is None
 
 
-from claw_ea.tools.calendar import create_calendar_event_impl
+from claw_ea.tools.calendar import create_calendar_event_impl, delete_calendar_event_impl
 
 
 @pytest.fixture
@@ -67,4 +67,46 @@ async def test_create_event_calendar_not_found(mock_ek_client):
         await create_calendar_event_impl(
             title="test", start_time="2026-03-22T09:00:00",
             ek_client=mock_ek_client, calendar_name="不存在",
+        )
+
+
+@pytest.mark.asyncio
+async def test_delete_event_basic(mock_ek_client):
+    mock_event = MagicMock()
+    mock_event.title.return_value = "[主刀] 腹腔镜胆囊切除术"
+    mock_ek_client.store.eventWithIdentifier_.return_value = mock_event
+    mock_ek_client.store.removeEvent_span_commit_error_.return_value = (True, None)
+
+    result = await delete_calendar_event_impl(
+        "test-id-123", ek_client=mock_ek_client,
+    )
+    assert result["deleted"] is True
+    assert result["event_id"] == "test-id-123"
+    assert result["title"] == "[主刀] 腹腔镜胆囊切除术"
+
+
+@pytest.mark.asyncio
+async def test_delete_event_empty_id(mock_ek_client):
+    with pytest.raises(ValueError, match="non-empty"):
+        await delete_calendar_event_impl("", ek_client=mock_ek_client)
+
+
+@pytest.mark.asyncio
+async def test_delete_event_not_found(mock_ek_client):
+    mock_ek_client.store.eventWithIdentifier_.return_value = None
+    with pytest.raises(ValueError, match="not found"):
+        await delete_calendar_event_impl(
+            "nonexistent-id", ek_client=mock_ek_client,
+        )
+
+
+@pytest.mark.asyncio
+async def test_delete_event_remove_fails(mock_ek_client):
+    mock_event = MagicMock()
+    mock_event.title.return_value = "test"
+    mock_ek_client.store.eventWithIdentifier_.return_value = mock_event
+    mock_ek_client.store.removeEvent_span_commit_error_.return_value = (False, "locked")
+    with pytest.raises(RuntimeError, match="Failed to delete event"):
+        await delete_calendar_event_impl(
+            "test-id", ek_client=mock_ek_client,
         )

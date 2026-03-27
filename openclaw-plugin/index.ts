@@ -14,7 +14,9 @@ import {
   createSaveAttachmentTool,
   createObsidianNoteTool,
   createCalendarEventTool,
+  createDeleteCalendarEventTool,
   createReminderTool,
+  createDeleteReminderTool,
   createOcrImageTool,
   createDetectVaultTool,
   createListCalendarsTool,
@@ -55,7 +57,9 @@ const clawEaPlugin = {
     api.registerTool(() => createSaveAttachmentTool(bridge));
     api.registerTool(() => createObsidianNoteTool(bridge));
     api.registerTool(() => createCalendarEventTool(bridge));
+    api.registerTool(() => createDeleteCalendarEventTool(bridge));
     api.registerTool(() => createReminderTool(bridge));
+    api.registerTool(() => createDeleteReminderTool(bridge));
     api.registerTool(() => createConvertToMarkdownTool(bridge));
     api.registerTool(() => createOcrImageTool(bridge));
 
@@ -65,7 +69,7 @@ const clawEaPlugin = {
     api.registerTool(() => createSaveConfigTool(bridge));
 
     api.logger.info(
-      `[claw-ea] Registered 9 tools (python=${pythonPath}, project=${projectDir})`,
+      `[claw-ea] Registered 11 tools (python=${pythonPath}, project=${projectDir})`,
     );
   },
 };
