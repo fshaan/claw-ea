@@ -10,7 +10,7 @@ I built claw-ea to solve my own problem: **forward work messages to an AI assist
 
 ## Requirements
 
-> **Current version (v0.1.3.1) is macOS-only and designed for Chinese-speaking medical professionals.**
+> **Current version (v0.1.4.0) is macOS-only and designed for Chinese-speaking medical professionals.**
 
 | Requirement | Details |
 |-------------|---------|
@@ -99,7 +99,7 @@ I need you to install the claw-ea plugin. Here are the steps:
    "claw-ea": {
      "source": "path",
      "installPath": "<HOME>/.openclaw/extensions/claw-ea",
-     "version": "0.1.3.1"
+     "version": "0.1.4.0"
    }
    Replace <HOME> with the actual home directory path.
 

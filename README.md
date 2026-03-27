@@ -10,7 +10,7 @@
 
 ## 环境要求
 
-> **当前版本（v0.1.3.1）只跑在 macOS 上，给中文医疗场景用的。**
+> **当前版本（v0.1.4.0）只跑在 macOS 上，给中文医疗场景用的。**
 
 | 条件 | 说明 |
 |------|------|
@@ -99,7 +99,7 @@ claw-ea 作为原生插件接入 OpenClaw，`openclaw-plugin/` 目录里是 Type
    "claw-ea": {
      "source": "path",
      "installPath": "<HOME>/.openclaw/extensions/claw-ea",
-     "version": "0.1.3.1"
+     "version": "0.1.4.0"
    }
    <HOME> 换成实际路径。
 
