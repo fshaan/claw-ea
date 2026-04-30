@@ -205,14 +205,14 @@ def convert_lmstudio(
 # --- mineru ---
 
 def mineru_is_available(config_paths: dict[str, str]) -> bool:
-    return _find_executable("magic-pdf", config_paths) is not None
+    return _find_executable("mineru", config_paths) is not None
 
 
 def convert_mineru(file_path: Path, config_paths: dict[str, str], timeout: int = 120) -> str:
-    """Convert PDF using MinerU (magic-pdf). Specialty: academic papers, complex formulas."""
-    exe = _find_executable("magic-pdf", config_paths)
+    """Convert PDF using MinerU. Specialty: academic papers, complex formulas."""
+    exe = _find_executable("mineru", config_paths)
     if not exe:
-        raise RuntimeError("magic-pdf not found")
+        raise RuntimeError("mineru not found")
 
     with tempfile.TemporaryDirectory(prefix="claw-ea-mineru-") as out_dir:
         cmd = [exe, "-p", str(file_path), "-o", out_dir, "-m", "auto"]
@@ -228,18 +228,18 @@ def convert_mineru(file_path: Path, config_paths: dict[str, str], timeout: int =
                 proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 pass
-            raise TimeoutError(f"magic-pdf timed out after {timeout}s on {file_path}")
+            raise TimeoutError(f"mineru timed out after {timeout}s on {file_path}")
 
         if proc.returncode != 0:
             stderr = stderr_data.decode("utf-8", errors="replace") if stderr_data else ""
-            raise RuntimeError(f"magic-pdf failed (exit {proc.returncode}): {stderr[:500]}")
+            raise RuntimeError(f"mineru failed (exit {proc.returncode}): {stderr[:500]}")
 
         stem = file_path.stem
         md_path = Path(out_dir) / stem / "auto" / f"{stem}.md"
         if not md_path.exists():
             md_files = list(Path(out_dir).rglob("*.md"))
             if not md_files:
-                raise RuntimeError(f"magic-pdf produced no .md output for {file_path}")
+                raise RuntimeError(f"mineru produced no .md output for {file_path}")
             md_path = md_files[0]
 
         return md_path.read_text(encoding="utf-8")
