@@ -4,9 +4,12 @@
   "description": "Medical office automation — Obsidian, Apple Calendar, Reminders",
   "main": "index.ts",
   "openclaw": {
-    "extensions": ["./index.ts"]
+    "extensions": [
+      "./index.ts"
+    ]
   },
   "dependencies": {
+    "@sinclair/typebox": "^0.34.48",
     "openclaw": "*"
   }
 }
