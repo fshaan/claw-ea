@@ -21,13 +21,13 @@ class TestConvertToMarkdownTool:
             fallback_used=False,
         )
 
-        result = convert_to_markdown_impl(str(input_file), "", mock_config)
+        result = convert_to_markdown_impl(str(input_file), mock_config)
         assert result["md_path"] == str(temp_md)
         assert result["converter_used"] == "docling"
         assert result["fallback_used"] is False
 
     def test_file_not_found(self, mock_config):
-        result = convert_to_markdown_impl("/nonexistent/file.pdf", "", mock_config)
+        result = convert_to_markdown_impl("/nonexistent/file.pdf", mock_config)
         assert "error" in result
 
     @patch("claw_ea.tools.converter.dispatch")
@@ -36,5 +36,5 @@ class TestConvertToMarkdownTool:
         input_file.write_text("fake pdf")
         mock_dispatch.side_effect = ValueError("Unsupported file extension: .pdf")
 
-        result = convert_to_markdown_impl(str(input_file), "", mock_config)
+        result = convert_to_markdown_impl(str(input_file), mock_config)
         assert "error" in result

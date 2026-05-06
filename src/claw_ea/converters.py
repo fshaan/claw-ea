@@ -209,7 +209,7 @@ def mineru_is_available(config_paths: dict[str, str]) -> bool:
 
 
 def convert_mineru(file_path: Path, config_paths: dict[str, str], timeout: int = 120) -> str:
-    """Convert PDF using MinerU. Specialty: academic papers, complex formulas."""
+    """Default converter for all PDF/document conversions via MinerU 3.1.6+."""
     exe = _find_executable("mineru", config_paths)
     if not exe:
         raise RuntimeError("mineru not found")
@@ -275,18 +275,18 @@ def convert_passthrough(file_path: Path) -> str:
 _IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp", ".gif"}
 _PLAINTEXT_EXTENSIONS = {".txt", ".md", ".rst", ".log"}
 
-DEFAULT_ROUTING: dict[str, dict[str, list[str]]] = {
-    ".pdf":  {"default": ["docling"]},
-    ".docx": {"default": ["docling", "markitdown"]},
-    ".pptx": {"default": ["docling", "markitdown"]},
-    ".xlsx": {"default": ["docling", "markitdown"]},
-    ".csv":  {"default": ["markitdown"]},
-    ".html": {"default": ["docling", "markitdown"]},
+DEFAULT_ROUTING: dict[str, list[str]] = {
+    ".pdf":  ["mineru", "docling"],
+    ".docx": ["mineru", "docling", "markitdown"],
+    ".pptx": ["mineru", "docling", "markitdown"],
+    ".xlsx": ["mineru", "docling", "markitdown"],
+    ".csv":  ["markitdown"],
+    ".html": ["docling", "markitdown"],
 }
 for _ext in _IMAGE_EXTENSIONS:
-    DEFAULT_ROUTING[_ext] = {"default": ["lmstudio", "docling", "vision_ocr"]}
+    DEFAULT_ROUTING[_ext] = ["lmstudio", "docling", "vision_ocr"]
 for _ext in _PLAINTEXT_EXTENSIONS:
-    DEFAULT_ROUTING[_ext] = {"default": ["passthrough"]}
+    DEFAULT_ROUTING[_ext] = ["passthrough"]
 
 
 def _get_available_check(name: str, config) -> bool:
@@ -335,13 +335,13 @@ def _write_temp(content: str) -> str:
     return str(temp_path)
 
 
-def dispatch(file_path: Path, config, hint: str = "") -> ConversionResult:
+def dispatch(file_path: Path, config) -> ConversionResult:
     """Route file to converter chain, try each with fallback.
 
-    1. Look up chain by extension + hint
+    1. Look up chain by extension
     2. Filter out unavailable converters
-    3. Try each: convert → is_usable → return or fallback
-    4. All fail → return longest result + warning
+    3. Try each: convert -> is_usable -> return or fallback
+    4. All fail -> return longest result + warning
     """
     ext = file_path.suffix.lower()
 
@@ -355,7 +355,7 @@ def dispatch(file_path: Path, config, hint: str = "") -> ConversionResult:
     else:
         raise ValueError(f"Unsupported file extension: {ext}")
 
-    chain = route_entry.get(hint, route_entry["default"]) if isinstance(route_entry, dict) else route_entry
+    chain = route_entry["default"] if isinstance(route_entry, dict) else route_entry
 
     available = [name for name in chain if _get_available_check(name, config)]
     if not available:

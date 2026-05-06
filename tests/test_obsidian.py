@@ -19,7 +19,10 @@ def test_create_surgery_note(mock_config):
     note = Path(result["note_path"])
     assert note.exists()
     content = note.read_text(encoding="utf-8")
-    assert "category: surgery" in content
+    assert "type: document" in content       # §4: surgery → document
+    assert "category: surgery" in content    # claw-ea subtype preserved
+    assert "source: claw-ea" in content      # §4: source marker
+    assert "status: inbox" in content        # §4: lifecycle
     assert "张三" in content
     assert "腹腔镜胆囊切除术" in content
 
@@ -33,6 +36,7 @@ def test_create_meeting_note(mock_config):
     }
     result = create_obsidian_note_impl("meeting", data["title"], data, [], mock_config)
     content = Path(result["note_path"]).read_text(encoding="utf-8")
+    assert "type: meeting_minutes" in content  # §4: meeting → meeting_minutes
     assert "category: meeting" in content
 
 
@@ -69,7 +73,12 @@ def test_frontmatter_is_valid_yaml(mock_config):
     parts = content.split("---")
     assert len(parts) >= 3
     fm = yaml.safe_load(parts[1])
+    assert fm["source"] == "claw-ea"
+    assert fm["type"] == "document"       # general → document (fallback)
     assert fm["category"] == "general"
+    assert fm["status"] == "inbox"
+    assert "ingested_at" in fm
+    assert fm["processed_by_ai"] is False
 
 
 def test_note_path_in_configured_folder(mock_config):
@@ -88,12 +97,19 @@ def test_raw_body_path_creates_note_with_file_content(mock_config, tmp_path):
     result = create_obsidian_note_impl(
         "document", "test doc", data, ["/path/to/original.pdf"], mock_config,
         raw_body_path=str(md_file),
+        converter_used="mineru",
     )
     content = Path(result["note_path"]).read_text(encoding="utf-8")
+    # Verbatim header
+    assert "> **原始文件**" in content
+    assert "> **转换工具**：mineru" in content
+    assert "> **转换时间**" in content
+    # Original content preserved
     assert "# Converted Content" in content
     assert "This is the converted markdown." in content
-    assert "category: document" in content  # frontmatter still generated
-    assert "[[original.pdf]]" in content  # original file wikilink
+    # Frontmatter
+    assert "type: document" in content
+    assert "source: claw-ea" in content
 
 
 def test_raw_body_path_deletes_temp_file(mock_config, tmp_path):
@@ -127,3 +143,143 @@ def test_raw_body_path_empty_string_uses_template(mock_config):
     )
     content = Path(result["note_path"]).read_text(encoding="utf-8")
     assert "## 摘要" in content  # template-rendered section
+
+
+# --- PR-3 new tests ---
+
+def test_verbatim_mode_with_converter_header(mock_config, tmp_path):
+    """raw_body_path + converter_used → verbatim body with header block (§5.2)."""
+    md_file = tmp_path / "output.md"
+    md_file.write_text("# Full Paper\n\n## Abstract\n\nSignificant findings.", encoding="utf-8")
+
+    result = create_obsidian_note_impl(
+        "document", "Paper", {"title": "Paper"}, [],
+        mock_config,
+        raw_body_path=str(md_file),
+        converter_used="mineru",
+    )
+    content = Path(result["note_path"]).read_text(encoding="utf-8")
+    # Header block
+    assert "> **转换工具**：mineru" in content
+    assert "> **转换时间**" in content
+    assert "---" in content
+    # Original content verbatim
+    assert "# Full Paper" in content
+    assert "Significant findings" in content
+    # No template rendering
+    assert "## 备注" not in content
+
+
+def test_idea_dual_section_structure(mock_config, tmp_path):
+    """type=idea + raw_body_path → dual-section body (§5.3)."""
+    idea_text = "今天看到一篇关于 X 的论文，觉得 Y 方向有意思"
+    md_file = tmp_path / "idea.md"
+    md_file.write_text(idea_text, encoding="utf-8")
+
+    result = create_obsidian_note_impl(
+        "raw_thought", "研究方向", {"title": "研究方向"}, [],
+        mock_config,
+        raw_body_path=str(md_file),
+        type="idea",
+        idea_stage="raw",
+        idea_topics=["agent-design", "obsidian"],
+    )
+    content = Path(result["note_path"]).read_text(encoding="utf-8")
+    # Dual sections
+    assert "## 原始想法（用户原文，AI 不得修改）" in content
+    assert f"> {idea_text}" in content
+    assert "## AI 调研补充" in content
+    # Frontmatter
+    assert "type: idea" in content
+    assert "category: raw_thought" in content
+    assert "idea_stage: raw" in content
+    assert "agent-design" in content
+    assert "obsidian" in content
+
+
+def test_dedup_by_raw_body(mock_config, tmp_path):
+    """Same raw body + same attachments → same hash → dedup."""
+    md1 = tmp_path / "output1.md"
+    md1.write_text("# Same content", encoding="utf-8")
+    md2 = tmp_path / "output2.md"
+    md2.write_text("# Same content", encoding="utf-8")  # identical content, different path
+
+    r1 = create_obsidian_note_impl(
+        "document", "test", {"title": "test"}, ["/p/a.pdf"], mock_config,
+        raw_body_path=str(md1),
+    )
+    r2 = create_obsidian_note_impl(
+        "document", "test", {"title": "test"}, ["/p/a.pdf"], mock_config,
+        raw_body_path=str(md2),
+    )
+    assert r1["note_path"] == r2["note_path"]
+    assert r2["already_existed"] is True
+
+
+def test_dedup_different_raw_body_different_hash(mock_config, tmp_path):
+    """Different raw body → different hash → new note."""
+    md1 = tmp_path / "output1.md"
+    md1.write_text("# Content A", encoding="utf-8")
+    md2 = tmp_path / "output2.md"
+    md2.write_text("# Content B", encoding="utf-8")
+
+    r1 = create_obsidian_note_impl(
+        "document", "test", {"title": "test"}, [], mock_config,
+        raw_body_path=str(md1),
+    )
+    r2 = create_obsidian_note_impl(
+        "document", "test", {"title": "test"}, [], mock_config,
+        raw_body_path=str(md2),
+    )
+    assert r1["note_path"] != r2["note_path"]
+
+
+def test_idea_type_auto_derived_from_raw_thought(mock_config, tmp_path):
+    """When type is omitted, raw_thought → type=idea per §4.1 mapping."""
+    md_file = tmp_path / "idea.md"
+    md_file.write_text("some thought", encoding="utf-8")
+
+    result = create_obsidian_note_impl(
+        "raw_thought", "idea title", {"title": "idea title"}, [],
+        mock_config,
+        raw_body_path=str(md_file),
+    )
+    content = Path(result["note_path"]).read_text(encoding="utf-8")
+    assert "type: idea" in content
+    assert "## 原始想法" in content
+
+
+def test_meeting_type_auto_derived_from_meeting(mock_config):
+    """When type is omitted, meeting → type=meeting_minutes per §4.1 mapping."""
+    result = create_obsidian_note_impl(
+        "meeting", "test meeting", {"title": "test"}, [], mock_config,
+    )
+    content = Path(result["note_path"]).read_text(encoding="utf-8")
+    assert "type: meeting_minutes" in content
+
+
+def test_frontmatter_includes_optional_fields(mock_config, tmp_path):
+    """All optional §4 fields render correctly when provided."""
+    md_file = tmp_path / "test.md"
+    md_file.write_text("# test content", encoding="utf-8")
+
+    result = create_obsidian_note_impl(
+        "document", "Test Note", {"title": "test"}, ["/p/doc.pdf"],
+        mock_config,
+        raw_body_path=str(md_file),
+        type="document",
+        source_channel="feishu",
+        source_message_id="msg-12345",
+        message_ts="2026-05-06T10:30:00",
+        project="[[Research]]",
+        related_event_id="E:abc123",
+        related_reminder_id="R:def456",
+        converter_used="mineru",
+    )
+    content = Path(result["note_path"]).read_text(encoding="utf-8")
+    assert "source_channel: feishu" in content
+    assert "source_message_id: msg-12345" in content
+    assert "message_ts: '2026-05-06T10:30:00'" in content
+    assert "project: '[[Research]]'" in content
+    assert "related_event_id: E:abc123" in content
+    assert "related_reminder_id: R:def456" in content

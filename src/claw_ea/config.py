@@ -23,7 +23,7 @@ class Config:
     surgery_user_roles: list[str]
     # Converter settings (all optional)
     converter_paths: dict[str, str]  # e.g. {"docling": "/path/to/docling"}
-    converter_routing: dict[str, dict[str, list[str]]]  # e.g. {".pdf": {"default": ["docling"]}}
+    converter_routing: dict[str, list[str]]  # e.g. {".pdf": ["mineru", "docling"]}
     lmstudio_endpoint: str
     lmstudio_api_key: str
     lmstudio_model: str

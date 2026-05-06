@@ -141,11 +141,11 @@ converters:
   paths:                              # Override CLI paths when shutil.which() fails
     docling: /path/to/docling
   routing:                            # Override converter priority chains per format
-    pdf:
-      default: [docling]
-      academic: [mineru, docling]     # hint="academic" uses MinerU first
-    image:
-      default: [lmstudio, docling, vision_ocr]
+    pdf: [mineru, docling]
+    docx: [mineru, docling, markitdown]
+    pptx: [mineru, docling, markitdown]
+    xlsx: [mineru, docling, markitdown]
+    image: [lmstudio, mineru, docling, vision_ocr]
 ```
 
 ## Domain-Specific Logic
@@ -184,35 +184,48 @@ After installing the plugin, you need to tell the OpenClaw agent **when and how*
 ## Social media message auto-processing (claw-ea)
 
 **Trigger**: When the user forwards work messages from Feishu/WeCom/Telegram
-(surgery notices, meeting schedules, files, screenshots), automatically use
-claw-ea tools. No trigger word needed — decide based on message content.
+(surgery notices, meeting schedules, files, screenshots, ideas), automatically
+use claw-ea tools. No trigger word needed — decide based on message content.
+
+**Capture-First principle**: Original text/files preserved verbatim. Agent
+classifies + routes; MinerU converts files; body comes from raw_body_path.
 
 **Flow**:
-1. Read the message — classify as surgery/meeting/meeting_minutes/task/document/general
-2. If image: read it directly (or call claw_ocr_image if you can't see images)
-3. If attachment: call claw_save_attachment
-4. If file attached (PDF/docx/pptx/xlsx/image/plaintext): call claw_convert_to_markdown → get md_path
-   - PPT: read converted MD, summarize, pass summary to create_note via content_data (not raw_body_path)
-5. Create note (surgery excluded — no note for surgery): call claw_create_note with category, title, structured data, attachment paths, raw_body_path=md_path
-6. If schedule/task: show summary for user confirmation, then call:
-   - Surgery: claw_create_calendar_event only (no note, no reminder). Events include 15-min alarm.
+1. Read the message — classify into type (qp namespace) + category (claw-ea subtype)
+   - type: meeting_minutes | document | idea | review | writing
+   - category: surgery | meeting | task | document | raw_thought | review
+2. Time extraction with confidence self-assessment: only pass start_time when
+   expression is unambiguous ("tomorrow 3pm", "5/8 14:00"). Vague expressions
+   ("next week") → prompt user to clarify, don't auto-create events.
+3. Multi-message merge: same sender + 5min window → merge; "/split" overrides.
+4. If attachment: call claw_save_attachment
+5. If file attached (PDF/docx/pptx/xlsx/image/plaintext): call
+   claw_convert_to_markdown → get md_path. No hint needed — MinerU is default.
+   - PPT: read converted MD, summarize, pass summary to create_note via
+     content_data (not raw_body_path)
+6. Create note (surgery excluded): call claw_create_note with category, type,
+   title, content_data, attachment_paths, raw_body_path=md_path.
+   Recommended: source_channel, message_ts, converter_used.
+7. If type=idea: create note with idea_stage=raw, then openclaw cron add --at +2min
+   for async AI research. Tell user: "想法已归档到创意池（自动调研已排队，约 2 分钟后补充）"
+   If cron fails: fallback — "想法已归档到创意池。需要我做 AI 调研补充吗？"
+8. If schedule/task: show summary for confirmation, then call:
+   - Surgery: claw_create_calendar_event only (no note, no reminder). 15-min alarm.
    - Meeting: claw_create_calendar_event + claw_create_reminder (if user has agenda items)
    - Task: claw_create_reminder
-
-**Multi-message**: Consecutive messages about the same event → merge before processing.
-Different events → process separately.
 
 **Don't trigger**: For chat, Q&A, commands, or anything unrelated to work message archiving.
 ```
 
 **`TOOLS.md`** — add a claw-ea section with:
-- Tool table (9 tools, which are auto vs need-confirmation)
-- Message category → action mapping table
-- User name matching list (name + aliases from config)
-- Surgery case time slots
+- Tool table (11 tools, auto vs confirm-required, OCR marked as manual/备用)
+- claw_create_note v2 parameter table (category/type/raw_body_path/source_channel etc.)
+- category → type mapping table (§4.1)
+- Message category → action mapping table (7 categories)
+- File conversion constraint: save_attachment → convert_to_markdown → create_note chain
 - Approval summary format template
 
-See the installed `~/.openclaw/workspace/TOOLS.md` for a complete example.
+See the installed `~/.openclaw/workspace/TOOLS.md` or `openclaw-plugin/PROMPT_TEMPLATE.md` for the complete template.
 
 ## Design Documents
 

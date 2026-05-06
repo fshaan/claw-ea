@@ -39,18 +39,36 @@ export function createObsidianNoteTool(bridge: McpBridge) {
     name: "claw_create_note",
     label: "创建笔记",
     description:
-      "Create an Obsidian note with YAML frontmatter. Deduplicates by content hash. " +
-      "Categories: surgery, meeting, meeting_minutes, task, document, general. " +
-      "IMPORTANT: For files, raw_body_path MUST come from convert_to_markdown. " +
+      "Create a Capture-First v2 Obsidian note with §4 YAML frontmatter. Deduplicates by raw body content hash. " +
+      "Categories (claw-ea business subtype): surgery, meeting, task, document, raw_thought, review. " +
+      "Types (qp namespace, auto-derived from category if omitted): meeting_minutes, document, idea, review, writing. " +
+      "IMPORTANT: raw_body_path MUST come from convert_to_markdown for file-based messages. " +
       "Do NOT create notes for surgery category — use create_calendar_event only.",
     parameters: Type.Object({
-      category: Type.String({ description: "surgery | meeting | meeting_minutes | task | document | general" }),
-      title: Type.String({ description: "Note title" }),
+      category: Type.String({ description: "claw-ea subtype: surgery | meeting | task | document | raw_thought | review" }),
+      title: Type.String({ description: "Note title (auto-generated from message first line, max 30 chars)" }),
       content_data: Type.Any({ description: "Structured data extracted from the message (JSON object)" }),
       attachment_paths: Type.Optional(Type.Array(Type.String(), { description: "Paths from save_attachment" })),
-      raw_body_path: Type.Optional(Type.String({ description: "Path to Markdown file from convert_to_markdown. When set, file content becomes note body." })),
+      raw_body_path: Type.Optional(Type.String({ description: "md_path from convert_to_markdown. File content becomes note body verbatim." })),
+      type: Type.Optional(Type.String({ description: "qp namespace: meeting_minutes | document | idea | review | writing. Derived from category if omitted." })),
+      source_channel: Type.Optional(Type.String({ description: "feishu | wecom | telegram | tui" })),
+      source_message_id: Type.Optional(Type.String({ description: "Channel-native message ID for dedup/tracing" })),
+      message_ts: Type.Optional(Type.String({ description: "Original message timestamp (ISO 8601)" })),
+      project: Type.Optional(Type.String({ description: 'Obsidian wikilink, e.g. "[[ProjectName]]"' })),
+      related_event_id: Type.Optional(Type.String({ description: "Calendar event ID for back-reference" })),
+      related_reminder_id: Type.Optional(Type.String({ description: "Reminder ID for back-reference" })),
+      converter_used: Type.Optional(Type.String({ description: "Converter name (mineru, docling, etc.)" })),
+      idea_stage: Type.Optional(Type.String({ description: "Only for type=idea: raw | enriched | framed" })),
+      idea_topics: Type.Optional(Type.Array(Type.String(), { description: "Only for type=idea: research dimension tags" })),
     }),
-    async execute(_id: string, params: { category: string; title: string; content_data: unknown; attachment_paths?: string[]; raw_body_path?: string }) {
+    async execute(_id: string, params: {
+      category: string; title: string; content_data: unknown;
+      attachment_paths?: string[]; raw_body_path?: string;
+      type?: string; source_channel?: string; source_message_id?: string;
+      message_ts?: string; project?: string;
+      related_event_id?: string; related_reminder_id?: string;
+      converter_used?: string; idea_stage?: string; idea_topics?: string[];
+    }) {
       const result = await bridge.callTool("create_obsidian_note", params);
       return textResult(result);
     },
@@ -64,14 +82,14 @@ export function createConvertToMarkdownTool(bridge: McpBridge) {
     description:
       "Convert a file to Markdown and save as a temp file. " +
       "IMPORTANT: MUST be called for ALL files before creating Obsidian notes. " +
+      "Uses MinerU as the default converter with automatic fallback to docling. " +
       "Supports: PDF, Word, Excel, PowerPoint, CSV, HTML, images, plaintext. " +
       "For PPT: read the converted MD, summarize it, pass summary to create_note via content_data (not raw_body_path). " +
       "Returns a temp file path — pass it to create_obsidian_note's raw_body_path parameter.",
     parameters: Type.Object({
       file_path: Type.String({ description: "Path to the file to convert" }),
-      hint: Type.Optional(Type.String({ description: 'Optional type hint, e.g. "academic" for academic PDF papers' })),
     }),
-    async execute(_id: string, params: { file_path: string; hint?: string }) {
+    async execute(_id: string, params: { file_path: string }) {
       const result = await bridge.callTool("convert_to_markdown", params);
       return textResult(result);
     },

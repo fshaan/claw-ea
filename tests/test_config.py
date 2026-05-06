@@ -78,11 +78,8 @@ converters:
   paths:
     docling: /usr/local/bin/docling
   routing:
-    pdf:
-      default: [docling]
-      academic: [mineru, docling]
-    image:
-      default: [lmstudio, vision_ocr]
+    pdf: [docling]
+    image: [lmstudio, vision_ocr]
 """, encoding="utf-8")
     from claw_ea.config import load_config
     cfg = load_config(config_file)
@@ -91,9 +88,8 @@ converters:
     assert cfg.lmstudio_model == "glm-ocr"
     assert cfg.lmstudio_timeout == 90
     assert cfg.converter_paths == {"docling": "/usr/local/bin/docling"}
-    assert cfg.converter_routing[".pdf"]["default"] == ["docling"]
-    assert cfg.converter_routing[".pdf"]["academic"] == ["mineru", "docling"]
-    assert cfg.converter_routing[".image"]["default"] == ["lmstudio", "vision_ocr"]
+    assert cfg.converter_routing[".pdf"] == ["docling"]
+    assert cfg.converter_routing[".image"] == ["lmstudio", "vision_ocr"]
 
 
 def test_parse_config_without_converters(tmp_path):

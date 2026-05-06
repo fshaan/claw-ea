@@ -228,9 +228,10 @@ class TestDispatch:
             lmstudio_timeout=lms_kwargs.get("timeout", 120),
         )
 
+    @patch("claw_ea.converters.mineru_is_available", return_value=False)
     @patch("claw_ea.converters.docling_is_available", return_value=True)
     @patch("claw_ea.converters.convert_docling", return_value="# Good markdown\n\nContent here")
-    def test_happy_path_pdf(self, mock_convert, mock_avail, tmp_path):
+    def test_happy_path_pdf(self, mock_convert, mock_avail, mock_mineru_avail, tmp_path):
         cfg = self._make_config(tmp_path)
         f = tmp_path / "test.pdf"
         f.write_text("fake")
@@ -240,11 +241,12 @@ class TestDispatch:
         assert Path(result.temp_path).exists()
         assert "Good markdown" in Path(result.temp_path).read_text()
 
+    @patch("claw_ea.converters.mineru_is_available", return_value=False)
     @patch("claw_ea.converters.docling_is_available", return_value=True)
     @patch("claw_ea.converters.convert_docling", return_value="")
     @patch("claw_ea.converters.markitdown_is_available", return_value=True)
     @patch("claw_ea.converters.convert_markitdown", return_value="# Fallback content")
-    def test_fallback_on_empty(self, mock_mk, mock_mk_avail, mock_dl, mock_dl_avail, tmp_path):
+    def test_fallback_on_empty(self, mock_mk, mock_mk_avail, mock_dl, mock_dl_avail, mock_mineru_avail, tmp_path):
         cfg = self._make_config(tmp_path)
         f = tmp_path / "test.docx"
         f.write_text("fake")
@@ -252,10 +254,11 @@ class TestDispatch:
         assert result.converter_used == "markitdown"
         assert result.fallback_used is True
 
+    @patch("claw_ea.converters.mineru_is_available", return_value=False)
     @patch("claw_ea.converters.docling_is_available", return_value=False)
     @patch("claw_ea.converters.markitdown_is_available", return_value=True)
     @patch("claw_ea.converters.convert_markitdown", return_value="# Content")
-    def test_skip_unavailable(self, mock_mk, mock_mk_avail, mock_dl_avail, tmp_path):
+    def test_skip_unavailable(self, mock_mk, mock_mk_avail, mock_dl_avail, mock_mineru_avail, tmp_path):
         cfg = self._make_config(tmp_path)
         f = tmp_path / "test.docx"
         f.write_text("fake")
@@ -264,11 +267,12 @@ class TestDispatch:
         # Skipping unavailable is not "fallback" — fallback means tried and rejected
         assert result.fallback_used is False
 
+    @patch("claw_ea.converters.mineru_is_available", return_value=False)
     @patch("claw_ea.converters.docling_is_available", return_value=True)
     @patch("claw_ea.converters.convert_docling", side_effect=RuntimeError("crash"))
     @patch("claw_ea.converters.markitdown_is_available", return_value=True)
     @patch("claw_ea.converters.convert_markitdown", return_value="# Recovered")
-    def test_fallback_on_exception(self, mock_mk, mock_mk_avail, mock_dl, mock_dl_avail, tmp_path):
+    def test_fallback_on_exception(self, mock_mk, mock_mk_avail, mock_dl, mock_dl_avail, mock_mineru_avail, tmp_path):
         cfg = self._make_config(tmp_path)
         f = tmp_path / "test.pptx"
         f.write_text("fake")
@@ -292,37 +296,40 @@ class TestDispatch:
         with pytest.raises(ValueError, match="Unsupported"):
             dispatch(f, cfg)
 
+    @patch("claw_ea.converters.mineru_is_available", return_value=True)
+    @patch("claw_ea.converters.convert_mineru", return_value="# MinerU output")
     @patch("claw_ea.converters.docling_is_available", return_value=True)
-    @patch("claw_ea.converters.convert_docling", return_value="# Custom route")
-    def test_hint_selects_sub_route(self, mock_convert, mock_avail, tmp_path):
-        cfg = self._make_config(tmp_path, routing={
-            ".pdf": {"default": ["markitdown"], "academic": ["docling"]},
-        })
+    def test_pdf_defaults_to_mineru_first(self, mock_dl_avail, mock_mineru, mock_mineru_avail, tmp_path):
+        """Without hint, PDF dispatch picks first converter in DEFAULT_ROUTING chain."""
+        cfg = self._make_config(tmp_path)
         f = tmp_path / "paper.pdf"
         f.write_text("fake")
-        result = dispatch(f, cfg, hint="academic")
-        assert result.converter_used == "docling"
+        result = dispatch(f, cfg)
+        assert result.converter_used == "mineru"
+        assert result.fallback_used is False
 
+    @patch("claw_ea.converters.mineru_is_available", return_value=False)
     @patch("claw_ea.converters.docling_is_available", return_value=True)
     @patch("claw_ea.converters.convert_docling", return_value="# Default route content")
     @patch("claw_ea.converters.markitdown_is_available", return_value=True)
     @patch("claw_ea.converters.convert_markitdown", return_value="# Markitdown content")
-    def test_partial_config_routing_falls_back_to_default(self, mock_mk, mock_mk_avail, mock_dl, mock_dl_avail, tmp_path):
+    def test_partial_config_routing_falls_back_to_default(self, mock_mk, mock_mk_avail, mock_dl, mock_dl_avail, mock_mineru_avail, tmp_path):
         """Config routing only covers .pdf — .docx should fall back to DEFAULT_ROUTING."""
         cfg = self._make_config(tmp_path, routing={
-            ".pdf": {"default": ["markitdown"]},  # only pdf configured
+            ".pdf": ["markitdown"],  # only pdf configured
         })
         f = tmp_path / "test.docx"
         f.write_text("fake")
         result = dispatch(f, cfg)
-        # .docx not in config routing, should fall back to DEFAULT_ROUTING: ["docling", "markitdown"]
+        # .docx not in config routing, falls back to DEFAULT_ROUTING: ["mineru", "docling", "markitdown"]
         assert result.converter_used == "docling"
 
+    @patch("claw_ea.converters.mineru_is_available", return_value=False)
     @patch("claw_ea.converters.docling_is_available", return_value=True)
     @patch("claw_ea.converters.convert_docling", return_value="")
     @patch("claw_ea.converters.markitdown_is_available", return_value=True)
     @patch("claw_ea.converters.convert_markitdown", return_value="\x00\x01\x02")
-    def test_all_fail_returns_longest(self, mock_mk, mock_mk_avail, mock_dl, mock_dl_avail, tmp_path):
+    def test_all_fail_returns_longest(self, mock_mk, mock_mk_avail, mock_dl, mock_dl_avail, mock_mineru_avail, tmp_path):
         cfg = self._make_config(tmp_path)
         f = tmp_path / "test.docx"
         f.write_text("fake")
