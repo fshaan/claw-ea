@@ -18,7 +18,7 @@
 | **Python** | 3.11+，用 [uv](https://docs.astral.sh/uv/) 管理依赖 |
 | **Obsidian** | 任意版本，笔记就是标准 Markdown 文件 |
 | **MCP 客户端** | [OpenClaw](https://openclaw.com)（原生插件）或其他 MCP 客户端（Claude Desktop、Cursor 等都行） |
-| **转换工具** | [docling](https://github.com/DS4SD/docling)（必装）+ [markitdown](https://github.com/microsoft/markitdown)（建议装，做回退） |
+| **转换工具** | [MinerU](https://github.com/opendatalab/MinerU)（必装，主力转换器）+ [docling](https://github.com/DS4SD/docling)（建议装，自动回退）+ [markitdown](https://github.com/microsoft/markitdown)（建议装，Office/CSV 回退） |
 
 Windows、Linux 暂时没做。等真有人需要再说。
 

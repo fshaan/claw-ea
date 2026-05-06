@@ -22,7 +22,8 @@
 #### Q2: 想法调研动作时机 → B 异步
 - **决议**: idea 类消息原文先入创意池（不阻塞），后台触发 AI 调研后追加 `## AI 调研补充` 段
 - **为什么**: capture-first 原则——原文零损失优先，调研失败不影响入库
-- **遗留**: 异步触发机制具体实现（agent 轮询 vs OpenClaw 后台任务原语）需先 spike
+- **实施** (2026-05-06 PR-7): B+C 混合模型——OpenClaw cron 创建一次性延迟任务（`--at +2min --delete-after-run`），agent 收到 system-event 后独立执行 web_search + vault 检索。cron 不可用时降级为用户 `/research` 手动触发
+- **Spike**: `docs/spikes/2026-05-06-openclaw-background-tasks.md` — 确认 OpenClaw 内置 cron scheduler（croner v10.0.1），支持秒级精度、独立 model/thinking 配置
 
 #### Q3: 调研信息来源 → 本地 vault + web 混合
 - **决议**: 本地 obsidian vault 检索 + web_search 联合，supplement 段区分两类来源
