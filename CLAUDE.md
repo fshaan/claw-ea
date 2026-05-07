@@ -150,7 +150,7 @@ converters:
 
 ## Domain-Specific Logic
 
-- **Surgery schedules**: When a surgery schedule mentions the user (by name/alias in a role like 主刀/带组/一助), create calendar events with estimated times based on case order (configurable per-slot).
+- **Surgery schedules**: When a surgery schedule mentions the user (by name/alias in a role like 主刀/带组/一助), create a reminder with `due_date` estimated from case order: case N maps to `schedule_time_slots[N]` (configurable per-slot, defaults: 1→09:00, 2→13:00, 3→17:00, 4→20:00). Case format: `{room}-{N}` e.g. `502-2` → case 2 → 13:00.
 - **Meeting agendas**: When a meeting has an agenda listing the user as presenter/chair/discussant, create reminder tasks for their specific agenda items.
 - **Meeting minutes**: Extract action items and follow-up schedules; only create reminders for items assigned to the user.
 
