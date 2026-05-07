@@ -5,6 +5,16 @@
 
 ---
 
+## 2026-05-07 — 手术流程反转：建日历 → 建提醒事项
+
+- **决议**: 手术通知**改为只建提醒事项**，不建日历事件、不建笔记
+- **为什么**: 实际使用发现日历事件冗余——手术时间由排班决定、不需要日历视图，提醒事项更轻量直接；且手术台次时间可由 `schedule_time_slots` 推算，不需要手动输入到日历
+- **推翻**: v0.1.3.1 的"仅建日历事件"决议
+- **台次推算**: `{房间}-{台次数}` 格式（如 502-2），台次数映射 `schedule_time_slots[N]` → `due_date`（ISO-8601）
+- **根因修复**: `schedule_time_slots` 配置存在于 config.yaml 但从未写入 agent prompt；本次同步更新 AGENTS.md + TOOLS.md
+
+---
+
 ## 2026-05-06 — Capture-First v2 重设计（Q1-Q8）
 
 设计源：`docs/design/2026-04-30-capture-first-redesign.md`
