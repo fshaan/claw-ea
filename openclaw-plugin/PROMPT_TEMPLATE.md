@@ -84,8 +84,7 @@
      更新 frontmatter: `processed_by_ai: true`, `idea_stage: enriched`
 
 9. **如果有日程/任务**：先展示摘要让用户确认，确认后调用对应工具：
-   - **手术安排**：仅调用 `claw_create_calendar_event`（不建笔记、不建提醒）。
-     事件含 15 分钟提醒。`start_time` 只填有明确时间表达的手术时间。
+   - **手术安排**：仅调用 `claw_create_reminder`（不建笔记、不建日历事件）。
    - **会议安排**：`claw_create_calendar_event` + `claw_create_reminder`
      （有用户议程项时）
    - **任务指派**：`claw_create_reminder`
@@ -150,7 +149,7 @@
 | category | type | qp 路由 |
 |----------|------|---------|
 | meeting | meeting_minutes | 📋 会议纪要编译 → `02_Projects/[项目]/` |
-| surgery | document | 🟢/🟡 直接归档（日历事件承载） |
+| surgery | document | 🟢/🟡 直接归档（提醒事项承载） |
 | task | document | 🟢/🟡 直接归档 |
 | document | document | 🟢/🟡 直接归档 |
 | raw_thought | idea | Route 9 → `05_创意池/` |
@@ -160,7 +159,7 @@
 
 | category | Obsidian 笔记 | 日历事件 | 提醒任务 |
 |----------|:---:|:---:|:---:|
-| surgery | ❌ | ✅（15min 提醒） | ❌ |
+| surgery | ❌ | ❌ | ✅ |
 | meeting | ✅ | ✅ | ✅（有用户议程项时） |
 | meeting_minutes | ✅ | ❌ | ✅（用户的 action items） |
 | task | ✅ | ❌ | ✅ |

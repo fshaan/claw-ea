@@ -210,7 +210,7 @@ classifies + routes; MinerU converts files; body comes from raw_body_path.
    for async AI research. Tell user: "想法已归档到创意池（自动调研已排队，约 2 分钟后补充）"
    If cron fails: fallback — "想法已归档到创意池。需要我做 AI 调研补充吗？"
 8. If schedule/task: show summary for confirmation, then call:
-   - Surgery: claw_create_calendar_event only (no note, no reminder). 15-min alarm.
+   - Surgery: claw_create_reminder only (no note, no calendar event).
    - Meeting: claw_create_calendar_event + claw_create_reminder (if user has agenda items)
    - Task: claw_create_reminder
 
