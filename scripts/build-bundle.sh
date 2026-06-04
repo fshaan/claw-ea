@@ -25,6 +25,13 @@ cp "$PY_PREFIX/lib/libpython${PY_VER}.dylib" "$APP/Contents/lib/"
 cp -R "$PY_PREFIX/lib/python${PY_VER}" "$APP/Contents/lib/python${PY_VER}"
 cp "$PLIST_SRC" "$APP/Contents/Info.plist"
 
+# 预编译 .pyc：cp 改了 .py 的 mtime，拷来的旧 .pyc 头里的源 mtime 对不上 → 运行时 Python 会
+# 重新编译并写新 .pyc 进 bundle，破坏整包签名 seal(codesign --verify --strict 失败)。
+# 先删旧 __pycache__ 再用 bundle 内 clawpy 重新 compileall(.pyc 头记录拷贝后的 .py mtime)，
+# 这样运行时 mtime 一致、不再重写。签名放在它之后，把一致的 .pyc 一并 seal。
+find "$APP/Contents/lib" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
+PYTHONHOME="$APP/Contents" "$APP/Contents/MacOS/clawpy" -m compileall -qq "$APP/Contents/lib/python${PY_VER}" || true
+
 # 清 quarantine(拷贝可能带 xattr，Gatekeeper 会卡)
 xattr -dr com.apple.quarantine "$APP" 2>/dev/null || true
 

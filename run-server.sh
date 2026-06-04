@@ -18,5 +18,6 @@ SITE="$REPO/.venv/lib/python$PYVER/site-packages"
 
 cd "$REPO"
 export PYTHONHOME="$APP/Contents"                       # 锁 stdlib 在 bundle 内
+export PYTHONDONTWRITEBYTECODE=1                         # 运行时不写 .pyc，保 bundle 签名 seal 不被破坏
 export PYTHONPATH="$REPO/src:$SITE${PYTHONPATH:+:$PYTHONPATH}"
 exec "$LAUNCHER" "$CLAWPY" -m claw_ea.server
