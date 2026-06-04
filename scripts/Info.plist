@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>            <string>com.fsh.claw-ea</string>
+    <key>CFBundleName</key>                  <string>claw-ea</string>
+    <key>CFBundleExecutable</key>            <string>clawpy</string>
+    <key>CFBundlePackageType</key>           <string>APPL</string>
+    <key>CFBundleInfoDictionaryVersion</key> <string>6.0</string>
+    <key>CFBundleShortVersionString</key>    <string>1.0</string>
+    <key>NSRemindersFullAccessUsageDescription</key>
+        <string>claw-ea 将工作消息中的提醒事项归档到 Apple 提醒事项。</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+        <string>claw-ea 将会议日程写入 Apple 日历。</string>
+</dict>
+</plist>

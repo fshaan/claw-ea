@@ -21,33 +21,57 @@ class EventKitClient:
             )
         self.store = EKEventStore.alloc().init()
 
-    async def ensure_calendar_access(self) -> None:
-        """Request calendar access. Raises PermissionError if denied."""
-        granted = await self._request_access(EKEntityTypeEvent)
-        if not granted:
-            raise PermissionError(
-                "Calendar access denied. Grant access in "
-                "System Preferences > Privacy & Security > Calendars."
-            )
+    async def ensure_calendar_access(self, allow_prompt: bool = False) -> None:
+        """Ensure calendar access. Raises PermissionError if unavailable."""
+        await self._ensure_access(EKEntityTypeEvent, "Calendar", "Calendars", allow_prompt)
 
-    async def ensure_reminder_access(self) -> None:
-        """Request reminder access. Raises PermissionError if denied."""
-        granted = await self._request_access(EKEntityTypeReminder)
-        if not granted:
-            raise PermissionError(
-                "Reminders access denied. Grant access in "
-                "System Preferences > Privacy & Security > Reminders."
-            )
+    async def ensure_reminder_access(self, allow_prompt: bool = False) -> None:
+        """Ensure reminder access. Raises PermissionError if unavailable."""
+        await self._ensure_access(EKEntityTypeReminder, "Reminders", "Reminders", allow_prompt)
 
-    async def _request_access(self, entity_type: int) -> bool:
-        """Bridge ObjC completion handler to asyncio."""
+    async def _ensure_access(
+        self, entity_type: int, label: str, pane: str, allow_prompt: bool
+    ) -> None:
+        """Status-gated access check.
+
+        Default (allow_prompt=False) never triggers a TCC prompt: if the status is
+        notDetermined we raise instead of requesting, so a headless/cron invocation
+        cannot poison the TCC cache with a denial. Only the dedicated GUI grant
+        entrypoint (claw_ea.grant) passes allow_prompt=True.
+        """
+        # EKAuthorizationStatus: 0 notDetermined, 1 restricted, 2 denied,
+        # 3 fullAccess/authorized, 4 writeOnly.
+        status = EKEventStore.authorizationStatusForEntityType_(entity_type)
+        if status in (3, 4):
+            return
+        if status == 0:
+            if not allow_prompt:
+                raise PermissionError(
+                    f"{label} access not yet authorized. Run the one-time GUI grant "
+                    f"in a graphical login session: `python -m claw_ea.grant`. "
+                    f"Refusing to request headless to avoid poisoning the TCC cache."
+                )
+            granted, error = await self._request_access(entity_type)
+            if not granted:
+                raise PermissionError(f"{label} access denied during prompt: {error}")
+            return
+        raise PermissionError(
+            f"{label} access is denied (status={status}). Enable it in "
+            f"System Settings > Privacy & Security > {pane}, then re-run the grant."
+        )
+
+    async def _request_access(self, entity_type: int):
+        """Bridge ObjC completion handler to asyncio (macOS 14+ full-access API)."""
         loop = asyncio.get_event_loop()
         future = loop.create_future()
 
         def callback(granted, error):
-            loop.call_soon_threadsafe(future.set_result, granted)
+            loop.call_soon_threadsafe(future.set_result, (granted, error))
 
-        self.store.requestAccessToEntityType_completion_(entity_type, callback)
+        if entity_type == EKEntityTypeEvent:
+            self.store.requestFullAccessToEventsWithCompletion_(callback)
+        else:
+            self.store.requestFullAccessToRemindersWithCompletion_(callback)
         return await future
 
     def find_calendar(self, name: str):
