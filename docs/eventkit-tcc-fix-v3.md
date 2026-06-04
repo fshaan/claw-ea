@@ -1,5 +1,9 @@
 # claw-ea EventKit/TCC 授权稳定化 — v3.1 执行方案
 
+> **执行进度（在 worktree `claw_EA-tcc` / 分支 `fix/eventkit-tcc-disclaim`）**：
+> §8 步骤 1–4 + bundle 构建（步骤3）已 **headless 完成并验证**。剩 Gate B（GUI 首授权）→ cutover → Gate A → 端到端。详见文末 §13。
+> 偏差：build-cert 改用**专用 keychain**（`~/.claw-ea/claw-ea.keychain-db`）而非 login keychain，以便无人值守签名（passphrase 在 `~/.claw-ea/.keychain-pass`，600，仓库外）。
+
 > 状态：定稿待执行。v3.1 并入 codex 独立 review 的全部修正，并把两个未经 spike 证明的推断
 > 降级为**执行期阻塞验证门**（§8 Gate A/B）。环境：macOS 26.5.1 / Apple Silicon / uv cpython-3.14.3。
 >
@@ -410,3 +414,46 @@ export PYTHONPATH="$PWD/src:$PWD/.venv/lib/python3.14/site-packages"
 - INF-1/2/3 在 Gate A/B 通过前仍是推断；v3.1 的价值是**把它们前置成低成本阻塞门**，失败有明确退路（§10/§11），不会在错误前提上继续盖楼。
 - `--deep` 签名 Apple 已不推荐用于分发（本地自签名包可接受）；若将来要分发需改 Developer ID + notarization。
 - bundle 内 stdlib `.so` 由整包签名一并签；若数量导致签名过慢，可评估只签 clawpy+libpython 并验证 TCC 是否仍认（属 Gate A 范畴）。
+
+---
+
+## 13. 执行进度与交接（fix/eventkit-tcc-disclaim）
+
+### 已完成并验证（headless）
+
+| 步骤 | 内容 | 验证结果 |
+|---|---|---|
+| 1 | `scripts/launcher.c` → 编译 `~/.claw-ea/claw-launcher` | `claw-launcher /bin/echo` ok |
+| 4 | `eventkit_utils.py`(状态闸+full-access+暴露error) + `grant.py` + `run-server.sh` 改写 | `pytest -m "not macos"` 122 passed |
+| 2 | `build-cert.sh` 建专用 keychain + 自签名证书 | `FOUND claw-ea-codesign` |
+| 3 | `build-bundle.sh` 建 `~/.claw-ea/claw-ea.app` 并整包签名 | **VERIFY PASS**：DR=`identifier "com.fsh.claw-ea" and certificate leaf`(非 cdhash)；freeze 生效(base_prefix/stdlib 指向 bundle) |
+| 诊断 | launcher(disclaim)→clawpy 的 authorizationStatus | 直接=3(继承Ghostty) / disclaim=**0**(自立 com.fsh.claw-ea) → **INF-3 确认**，强支持 INF-1 |
+
+### 剩余（需 GUI / live，无法 headless）
+
+**① Gate B — GUI 首授权（最先做，验 INF-1+INF-2）。** 在图形登录会话：
+```bash
+cd /Users/f.sh/Workspace/devs/claw_EA
+export PYTHONHOME="$HOME/.claw-ea/claw-ea.app/Contents"
+export PYTHONPATH="$PWD/src:$PWD/.venv/lib/python3.14/site-packages"
+"$HOME/.claw-ea/claw-launcher" "$HOME/.claw-ea/claw-ea.app/Contents/MacOS/clawpy" -m claw_ea.grant
+```
+应弹两次系统授权框（提醒/日历，文案即 Info.plist 的 usage 串）→ 允许。
+验证持久化：重跑上面「诊断 B」命令，status 应从 0 变 **3**。
+- ✅ 弹窗+授权+变 3 → INF-1/INF-2 成立，签名 bundle 路线完全验证。
+- ❌ 不弹/静默 deny → `tccutil reset Reminders; tccutil reset Calendar` 清污染，转 §10/§11。
+
+**② Cutover（Gate B 通过后）。** 把新 run-server.sh 切到 Hermes 读的路径并重启 Hermes：
+```bash
+cp /Users/f.sh/Workspace/devs/claw_EA-tcc/run-server.sh /Users/f.sh/Workspace/devs/claw_EA/run-server.sh
+# 然后重启 Hermes(GUI app) 让它用新 run-server.sh 重新 spawn claw-ea
+```
+> 注意：cutover **必须在 Gate B 授权之后**——否则连当前能用的 Ghostty 链路也会因状态闸(notDetermined)报错。
+
+**③ Gate A — GUI-Hermes 下验归因。** 开 `log stream --debug --predicate 'process=="tccd"'`，在 GUI 双击启动的 Hermes 里让 claw-ea 建一条提醒，确认 `responsible=com.fsh.claw-ea`（非 com.nousresearch.hermes）且 Allowed。
+
+**④ 端到端 + cron。** GUI-Hermes 建提醒成功无 PermissionError；内置 cron 触发一次也成功。
+
+### 合并
+
+worktree 分支 `fix/eventkit-tcc-disclaim` 已含全部仓库工件（3 commits）。Gate A/B 通过后合并到 main（注意 main 当前有他人未提交改动，合并时机由你定）。
