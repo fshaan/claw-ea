@@ -28,9 +28,24 @@ cp "$PLIST_SRC" "$APP/Contents/Info.plist"
 # 清 quarantine(拷贝可能带 xattr，Gatekeeper 会卡)
 xattr -dr com.apple.quarantine "$APP" 2>/dev/null || true
 
+# 专用 keychain(由 build-cert.sh 建)解锁，供 headless 签名
+KC="$HOME/.claw-ea/claw-ea.keychain-db"
+PASS_FILE="$HOME/.claw-ea/.keychain-pass"
+[ -f "$KC" ] && [ -f "$PASS_FILE" ] || { echo "缺专用 keychain，先跑 scripts/build-cert.sh"; exit 1; }
+security unlock-keychain -p "$(cat "$PASS_FILE")" "$KC"
+# 未受信自签名身份 codesign 按【名字】找不到(同 find-identity -v 隐藏)，须按 SHA1 签；
+# 且 codesign 的身份搜索只认【搜索列表】里的 keychain(--keychain 不够)，故临时加入再还原。
+SHA1="$(security find-identity "$KC" 2>/dev/null | grep -i "$IDENTITY" | head -1 | awk '{print $2}')"
+[ -n "$SHA1" ] || { echo "在 $KC 找不到身份 $IDENTITY"; exit 1; }
+ORIG_LIST="$(security list-keychains -d user | sed 's/[\" ]//g' | tr '\n' ' ')"
+security list-keychains -d user -s $ORIG_LIST "$KC" >/dev/null 2>&1
+restore_kc() { security list-keychains -d user -s $ORIG_LIST >/dev/null 2>&1; }
+trap restore_kc EXIT
+
 # 整包签名：seal Info.plist + nested code。--deep 对自签名本地包可接受。
 # 不加 --options runtime(hardened runtime 会触发库校验，未签名 .so 崩)。
-codesign --force --deep --identifier "$BUNDLE_ID" --sign "$IDENTITY" "$APP"
+codesign --force --deep --identifier "$BUNDLE_ID" --sign "$SHA1" "$APP"
+restore_kc; trap - EXIT
 
 echo "=== 验证 ==="
 "$SCRIPT_DIR/verify-bundle.sh"
