@@ -57,10 +57,23 @@ claw-ea/
 - 设计文档：`docs/design/YYYY-MM-DD-name.md`（日期前缀便于排序）
 - 笔记输出（写入 obsidian）：`{date}-{category}-{hash[:8]}.md`（content-hash 去重）
 - 一次性脚本：`scripts/<动作>_<对象>.py`（如 `migrate_legacy_inbox.py`）
+- **含 PHI 的一次性运维脚本**：严禁放仓库（含 `src/`、根目录），即便 gitignore 也会被
+  索引/备份/扫描。归档到仓库外 `~/.claw-ea/ops-archive/`（与 config.yaml 同处 PHI 运行域）
+
+### 附件在笔记内的引用
+- **图片 / PDF**：用 `![[file]]` 嵌入语法，在 Obsidian 笔记内**内联渲染展示**
+- **其余类型**（docx/xlsx/…）：用 `[[file]]` 链接（Obsidian 无法内联渲染）
+- 实现：`src/claw_ea/tools/obsidian.py` 的 `_render_attachment_ref()`，`_render_body`
+  与 `_render_verbatim_header` 共用，避免两处判定漂移
 
 ### 配置文件
 - 用户配置：`~/.claw-ea/config.yaml`（**不**放项目目录下，跨项目隔离）
 - 测试配置：`pyproject.toml` 内 `[tool.pytest.ini_options]`
+
+### 启动脚本
+- **无硬编码路径**：启动脚本（如 `run-server.sh`）严禁包含绝对路径。必须使用 `cd "$(dirname "$0")"` 定位到项目根目录。
+- **环境隔离**：脚本应显式指定使用项目内的虚拟环境（`./.venv/bin/python`）。
+- **PYTHONPATH**：由于采用 `src/` 布局，启动脚本必须包含 `export PYTHONPATH="$PYTHONPATH:./src"`，确保模块可见性。
 
 ---
 
@@ -71,6 +84,7 @@ claw-ea/
 - **包管理**: `uv`（不用 pip、poetry、pdm）
 - **lint**: `ruff check`（不用 flake8/pylint）
 - **依赖**: 主依赖在 `[project.dependencies]`，开发依赖在 `[dependency-groups.dev]`
+- **MCP 构造**: 仅使用 `FastMCP` 官方标准参数，严禁添加如 `json_response` 等非标准字段，防止协议握手失败。
 
 ### 类型注解
 - 函数签名 MUST 带返回类型注解

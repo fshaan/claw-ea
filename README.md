@@ -30,8 +30,8 @@ Windows、Linux 暂时没做。等真有人需要再说。
 - **建笔记** — 在 Obsidian 里生成带 frontmatter 的结构化笔记，会议、任务、文件各有分类
 - **排日历** — 会议写进 Apple 日历（写之前让你确认）
 - **设提醒** — 待办和你负责的议程条目加到提醒事项里
-- **转 Markdown** — PDF、Word、Excel、PPT、图片、纯文本，先转成 Markdown 再存，Obsidian 里全文可搜。6 个转换器，一个不行自动换下一个
-- **认图** — 排班截图、通知图片走 OCR（中英文），AI 直接读内容
+- **认图认 PDF** — 排班截图、通知图片、PDF 由 AI 多模态视觉**直接读**并归纳核心内容，原文件作为内链附件（`![[file]]`）嵌进笔记里展示，不再走格式转换
+- **转 Markdown** — Word、Excel、PPT 等 office 文档先转成 Markdown 再存（本机离线 MinerU 主力，docling/markitdown 回退），Obsidian 里全文可搜
 
 你要做的就是转发。
 
@@ -43,7 +43,7 @@ Windows、Linux 暂时没做。等真有人需要再说。
 
 **会议纪要**：转发纪要 → 提出待办 → 分给你的建提醒 → 下次会议时间加进日历
 
-**收到文件**：转发 PDF、Word → 转成 Markdown 嵌进 Obsidian 笔记 → 原文件留着当附件
+**收到文件**：转发图片/PDF → AI 视觉读出核心内容写进笔记，原文件内链嵌入展示；转发 Word/Excel/PPT → MinerU 转成 Markdown 嵌进笔记 → 原文件留着当附件
 
 日历和提醒写入前都要你点确认。笔记和附件直接存，低风险，随时能改。
 

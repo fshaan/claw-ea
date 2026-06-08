@@ -5,6 +5,54 @@
 
 ---
 
+## 2026-06-08 — 文件处理按类型分流 + 迁移残留清理
+
+### 图片/PDF 走 agent 视觉直读 + 内链嵌入
+- **决议**: 图片/PDF **不再默认转换格式**——由 agent 多模态视觉直接归纳核心内容写入笔记，
+  原文件作为内链附件用 `![[file]]` 在笔记中渲染展示；`convert_to_markdown`/`ocr_image`
+  降级为 agent 缺视觉能力时的兜底。office 文档（docx/pptx/xlsx）仍优先本机离线 MinerU
+  （docling 兜底）；csv/html 走 markitdown/docling；其余类型由大模型决定提取方案，
+  但原始文件始终经 `save_attachment` 归档。
+- **为什么**: agent 本就有多模态能力，对图片/PDF 再走转换器是多余且有损的一环；
+  让 agent 直读 + 原文件内联展示，信息更完整、笔记更可读。符合「Agent vs Tool 边界」
+  原则——理解任务归 agent，副作用工具只做写入。
+- **实现**: `obsidian.py` 新增 `_render_attachment_ref()` 按扩展名判定嵌入/链接；
+  convert/obsidian docstring 去除「所有文件必须转换」强制措辞，改为按类型分流。
+- **过程**: 经 codex 二次审查，修复 2 个 P2（工具契约自相矛盾、csv/html 误标 MinerU 默认）。
+
+### venv 搬迁损坏修复（接续 2026-05-08 迁移审计）
+- **决议**: 项目从 `Workspace/Claude` 搬到 `Workspace/devs` 后，`.venv` 整目录复制导致
+  console script（pytest/mcp/uvicorn 等）shebang 烤死旧绝对路径。已**非破坏式重建**
+  （备份→`uv sync`→验证→删备份）。pyproject `dev` 双源（optional-dependencies 与
+  dependency-groups）版本对齐 `pytest>=9.0.2`，保留两个安装入口。
+- **为什么**: 重建是唯一能修好 console-script shebang 的方式；`.venv/bin/python -m x`
+  能绕过 shebang 但 `uv run x` 和 MCP/console 入口不能。
+- **经验**: uv 项目整目录搬迁后，`.venv` 的 python 软链指向共享 store 仍可用，但 `bin/`
+  下 console script 的 shebang 写死旧路径——表现为 `uv run <tool>` 坏而
+  `.venv/bin/python -m <tool>` 正常。重建即解，不必怀疑解释器版本（曾误判为 `Path|None`
+  的 Python 版本问题，实为坏 venv 产物）。迁移审计还需覆盖 README 内的配置路径。
+
+### 含 PHI 的一次性脚本归档到仓库外
+- **决议**: 含真实患者信息的已执行一次性运维脚本移出仓库到 `~/.claw-ea/ops-archive/`，
+  工作树零 PHI。`.gitignore` 增补 `.gspowers/`、`.omc/`、`.venv.bak/`。
+- **为什么**: PHI 留在 git 工作树即便 gitignore 也会被 Spotlight 索引、Time Machine
+  备份、其它工具扫描——只有移出仓库根才真正消除暴露面。遵守工作空间「PHI 不进 git」红线。
+
+---
+
+## 2026-05-08 — 路径迁移修复与启动健壮性
+
+- **决议**: 
+  - 启动脚本 `run-server.sh` 统一使用相对路径和 `PYTHONPATH` 显式导出。
+  - 移除 `FastMCP` 初始化中的非标准 `json_response` 参数。
+- **为什么**: 项目从 `Workspace/Claude` 迁移到 `Workspace/devs` 后，由于脚本内部硬编码了旧路径导致启动失败。
+  - **相对路径**: 使用 `cd "$(dirname "$0")"` 确保脚本在任何目录下运行都能定位到虚拟环境。
+  - **PYTHONPATH**: 对于 `src/` 布局，必须显式将 `src` 目录加入 Python 搜索路径，否则 `-m claw_ea.server` 会找不到模块。
+  - **标准参数**: `json_response` 在官方 `mcp` SDK 中非标准，移除以保证跨版本兼容性，防止握手失败。
+- **经验**: 迁移项目后必须执行全局路径审计，尤其是 `.venv`、启动脚本和 MCP 客户端配置。
+
+---
+
 ## 2026-05-07 — 手术流程反转：建日历 → 建提醒事项
 
 - **决议**: 手术通知**改为只建提醒事项**，不建日历事件、不建笔记

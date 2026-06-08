@@ -1,7 +1,7 @@
 from mcp.server.fastmcp import FastMCP
 from claw_ea.config import load_config, ConfigError
 
-mcp = FastMCP("claw-ea", json_response=True)
+mcp = FastMCP("claw-ea")
 
 
 def main():
