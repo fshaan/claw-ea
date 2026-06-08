@@ -45,8 +45,46 @@ def test_note_with_attachment_links(mock_config):
     paths = ["/path/to/手术通知.pdf", "/path/to/会议纪要.docx"]
     result = create_obsidian_note_impl("document", data["title"], data, paths, mock_config)
     content = Path(result["note_path"]).read_text(encoding="utf-8")
-    assert "[[手术通知.pdf]]" in content
+    # PDF embeds (rendered inline); docx links (Obsidian can't render it inline)
+    assert "![[手术通知.pdf]]" in content
     assert "[[会议纪要.docx]]" in content
+    assert "![[会议纪要.docx]]" not in content
+
+
+def test_image_attachment_uses_embed_syntax(mock_config):
+    """图片附件用 ![[file]] 嵌入,在笔记中直接渲染展示。"""
+    data = {"title": "现场照片", "summary": "AI 视觉归纳的核心内容"}
+    paths = ["/path/to/术野照片.png"]
+    result = create_obsidian_note_impl("document", data["title"], data, paths, mock_config)
+    content = Path(result["note_path"]).read_text(encoding="utf-8")
+    assert "![[术野照片.png]]" in content
+
+
+def test_office_attachment_uses_link_syntax(mock_config):
+    """非图片/PDF 附件(docx/xlsx)用 [[file]] 链接,不嵌入。"""
+    data = {"title": "报表归档", "summary": "转换后正文已入正文区"}
+    paths = ["/path/to/季度报表.xlsx"]
+    result = create_obsidian_note_impl("document", data["title"], data, paths, mock_config)
+    content = Path(result["note_path"]).read_text(encoding="utf-8")
+    assert "[[季度报表.xlsx]]" in content
+    assert "![[季度报表.xlsx]]" not in content
+
+
+def test_verbatim_header_image_attachment_embeds(mock_config, tmp_path):
+    """raw_body_path 路径下,原始文件块中的图片也用 ![[file]] 嵌入展示。"""
+    md_file = tmp_path / "out.md"
+    md_file.write_text("正文内容", encoding="utf-8")
+    result = create_obsidian_note_impl(
+        "document", "图文笔记", {"title": "图文笔记"},
+        ["/path/to/扫描件.png", "/path/to/附表.docx"],
+        mock_config,
+        raw_body_path=str(md_file),
+        converter_used="mineru",
+    )
+    content = Path(result["note_path"]).read_text(encoding="utf-8")
+    assert "![[扫描件.png]]" in content        # 图片嵌入
+    assert "[[附表.docx]]" in content           # docx 链接
+    assert "![[附表.docx]]" not in content      # docx 不嵌入
 
 
 def test_dedup_same_content(mock_config):

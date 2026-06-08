@@ -24,8 +24,9 @@
 **触发条件**：当用户从飞书/企微/Telegram 转发工作消息时（手术通知、会议安排、文件、
 截图、想法灵感、评审报告等），自动使用 claw-ea 工具集处理。不需要触发词，根据消息内容判断。
 
-**Capture-First 核心原则**：原文零损失优先。你的职责是识别 + 分类 + 路由，
-不要改写或摘要原文内容。文件正文通过 raw_body_path（MinerU 转换输出）原样落地。
+**Capture-First 核心原则**：原文零损失优先。原始文件**始终**先经 `claw_save_attachment` 归档。
+你的职责是识别 + 分类 + 路由：图片/PDF 由你的多模态视觉直接归纳核心内容写入笔记，原文件作为
+内链附件（`![[file]]`）在笔记中渲染展示；office 文档由 MinerU 转换、正文通过 raw_body_path 原样落地。
 
 **处理流程**：
 
@@ -48,20 +49,26 @@
    默认：同 sender + 5 分钟内连续消息 → 合并为一个 session 处理。
    用户覆盖：群里发 "/split" 或 "分开处理" → 逐条独立 capture。
 
-5. **如果有附件**：调用 `claw_save_attachment` 保存文件。
+5. **如果有附件**：调用 `claw_save_attachment` 保存文件（原始文件**始终**先归档）。
 
-6. **⛔ 文件转换（不可跳过）**：所有非纯文本文件（PDF/Word/Excel/PPT/图片/纯文本）
-   → **必须**调用 `claw_convert_to_markdown` 获得 `md_path`。
-   MinerU 已设为默认转换器（不需要传 hint），docling 为自动回退。
-   - **PPT**：agent 读取转换后 Markdown 内容并总结，总结写入 content_data
-     （不使用 raw_body_path）
-   - **其他文件**：直接将 `md_path` 传给 raw_body_path
+6. **文件处理（按类型分流）**：
+   - **图片 / PDF**：**不转换格式**。你直接用多模态视觉读取文件，归纳核心内容，
+     通过 `content_data` 写入笔记。原文件作为内链附件由 create_note 以 `![[file]]`
+     内联渲染展示。仅当你缺多模态视觉能力时，才降级调用 `claw_convert_to_markdown`
+     / `claw_ocr_image` 兜底。
+   - **office 文档（docx/pptx/xlsx）**：调用 `claw_convert_to_markdown` 获得
+     `md_path`。MinerU 为默认转换器（本机离线，不需传 hint），docling 自动回退。
+     csv/html 也走此工具但路由到 markitdown/docling（非 MinerU）。
+     - **PPT**：读取转换后 Markdown 并总结，总结写入 content_data（不使用 raw_body_path）
+     - **其他 office 文件**：将 `md_path` 传给 raw_body_path
+   - **其余文件类型**：由你决定最优内容提取方案，但原始文件必须已归档（步骤 5）。
 
 7. **创建笔记**（surgery 类别除外——手术不建笔记）：
    调用 `claw_create_note`，传入：
-   - 必填：`category`、`title`（消息首句前 30 字）、`content_data`、`raw_body_path=md_path`
+   - 必填：`category`、`title`（消息首句前 30 字）、`attachment_paths`，
+     并二选一：`content_data`（图片/PDF/PPT 的视觉归纳）**或** `raw_body_path=md_path`（office 文档正文）
    - 推荐：`type`（不传则自动从 category 推导）、`source_channel`、`message_ts`、`project`
-   - 文件类：`converter_used`（mineru 或其他）、`attachment_paths`
+   - 文件类：`converter_used`（mineru 或其他，仅走转换时填）
 
 8. **idea 类异步调研**（Q2/Q3）：
    当 type=idea 时：
@@ -117,7 +124,7 @@
 | 工具 | 用途 | 自动/需确认 |
 |------|------|-------------|
 | `claw_save_attachment` | 保存附件，按日期分文件夹。**优先用 file_path** | 自动 |
-| `claw_convert_to_markdown` | **非文本文件必须调用**：MinerU 默认转换器，返回 `md_path`。无需传 hint | 自动 |
+| `claw_convert_to_markdown` | **office 文档调用**：docx/pptx/xlsx 用 MinerU 本机离线默认转换器（csv/html 路由到 markitdown/docling），返回 `md_path`。无需传 hint。图片/PDF 默认不走此工具（agent 视觉直读），仅缺视觉时兜底 | 自动 |
 | `claw_create_note` | 创建 Capture-First v2 笔记（§4 frontmatter schema，raw-body dedup） | 自动 |
 | `claw_create_calendar_event` | 创建 Apple Calendar 事件（含 15 分钟提醒） | **需用户确认** |
 | `claw_delete_calendar_event` | 按 event_id 删除日历事件 | **需用户确认** |
@@ -181,15 +188,18 @@
 **用户姓名匹配**：在排班表和议程中查找用户名及别名
 （见 `~/.claw-ea/config.yaml` 的 `user` 配置）。
 
-**⛔ 文件转换约束**：
-收到非纯文本文件时，**必须先调用 `claw_convert_to_markdown`**（MinerU 默认，
-自动 fallback 到 docling），获得 `md_path` 后传入 `claw_create_note` 的
-`raw_body_path` 参数。**严禁跳过此步骤直接创建笔记**。
+**文件处理约束（按类型分流）**：原始文件**始终**先经 `claw_save_attachment` 归档，再按类型处理。
 
-正确调用顺序：
-1. `claw_save_attachment(file_path=...)` → 保存原始文件
-2. `claw_convert_to_markdown(file_path=...)` → 获得 `md_path`
-3. `claw_create_note(..., raw_body_path=md_path, converter_used="mineru")` → verbatim body
+- **图片 / PDF**（不转换）：
+  1. `claw_save_attachment(file_path=...)` → 归档原始文件
+  2. 你用多模态视觉读取并归纳核心内容
+  3. `claw_create_note(..., content_data={"summary": ...}, attachment_paths=[原文件])`
+     → 原文件以 `![[file]]` 内联渲染展示
+- **office 文档**（docx/pptx/xlsx，走 MinerU 转换；csv/html 走 markitdown/docling）：
+  1. `claw_save_attachment(file_path=...)` → 归档原始文件
+  2. `claw_convert_to_markdown(file_path=...)` → 获得 `md_path`（docx/pptx/xlsx：MinerU 默认，docling 兜底）
+  3. `claw_create_note(..., raw_body_path=md_path, converter_used=...)` → verbatim body
+- **其余类型**：归档后由你决定最优提取方案。
 
 **审核流程**：笔记和附件直接创建（低风险）。日历和提醒**必须先展示摘要让用户确认**。
 ```

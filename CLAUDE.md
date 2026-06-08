@@ -17,7 +17,7 @@ The MCP server only provides **side-effect tools** — tools that write files, c
 **Core workflow** (called by agent after it classifies the message):
 - `ocr_image` — Local OCR only (macOS Vision framework). Agent's multimodal LLM handles image understanding directly; this tool is the fallback when the LLM lacks vision.
 - `save_attachment` — Saves file to date-organized attachment directory. Two modes: `file_path` (local path, preferred — uses shutil.copy2) or `file_content` (base64). Dedup: skips if identical file exists.
-- `convert_to_markdown` — Converts files (PDF, docx, pptx, xlsx, CSV, HTML, images, plaintext) to Markdown via configurable converter chains (docling → markitdown → mineru → lmstudio → vision_ocr → passthrough). Returns temp file path for `create_obsidian_note`'s `raw_body_path`. Fallback: if primary converter fails or output is garbled, automatically tries the next in chain. Plaintext files (.txt, .md, .rst, .log) use a passthrough converter.
+- `convert_to_markdown` — Converts files (PDF, docx, pptx, xlsx, CSV, HTML, images, plaintext) to Markdown via configurable converter chains (docling → markitdown → mineru → lmstudio → vision_ocr → passthrough). Returns temp file path for `create_obsidian_note`'s `raw_body_path`. Fallback: if primary converter fails or output is garbled, automatically tries the next in chain. Plaintext files (.txt, .md, .rst, .log) use a passthrough converter. **File-type routing**: images/PDF are NOT routed here by default — the agent reads them directly with its multimodal vision, summarizes, and keeps the original as an embedded attachment (`![[file]]`); this tool is only a fallback when the agent lacks vision. Office docs docx/pptx/xlsx go through MinerU (offline, local, default; docling fallback); csv/html route to markitdown/docling instead. Other types: agent picks the extraction, but the original is always archived via `save_attachment`.
 - `create_obsidian_note` — Creates Markdown note with YAML frontmatter in Obsidian vault. Supports `raw_body_path` to embed converted Markdown content. Dedup via content hash (first 8 chars in filename); returns existing path if duplicate.
 - `create_calendar_event` — Creates event in Apple Calendar via pyobjc EventKit. Returns event ID.
 - `delete_calendar_event` — Deletes an event from Apple Calendar by event ID. Agent should confirm with user first.
@@ -43,9 +43,11 @@ User message → [OpenClaw Agent / any MCP client]
                     │
                     ├─ Agent classifies message, fills structured JSON
                     │
-                    ├─ Calls save_attachment (auto)
-                    ├─ Calls convert_to_markdown (auto, for all files including plaintext)
-                    ├─ Calls create_obsidian_note (auto, with raw_body_path from convert_to_markdown)
+                    ├─ Calls save_attachment (auto — original always archived)
+                    ├─ Image/PDF: agent vision summarizes → note body; original embedded ![[file]]
+                    │  Office docs: convert_to_markdown (MinerU default) → raw_body_path
+                    │  Other: agent picks extraction → note body
+                    ├─ Calls create_obsidian_note (auto)
                     │
                     ├─ Agent formats approval summary, sends to user
                     │  User confirms → Agent calls:
@@ -88,6 +90,7 @@ claw-ea/
 
 ```bash
 uv sync                          # Install dependencies
+export PYTHONPATH="./src"        # Ensure modules are findable
 uv run python -m claw_ea.server  # Run MCP server
 uv run pytest                    # Run all tests
 uv run pytest -m "not macos"     # Run tests without macOS API calls
@@ -98,7 +101,9 @@ uv run pytest tests/test_obsidian.py -k "test_dedup"  # Single test
 
 ## Key Design Decisions
 
-1. **No classify_message tool** — Classification is the agent's job. Tool descriptions include the expected JSON schema so the agent knows what to pass.
+1. **No stdout noise** — MCP uses `stdio` for JSON-RPC. Any `print()` to `stdout` will break the protocol. Always use `sys.stderr` for logging/errors.
+2. **src/ layout** — The project uses a `src/` layout. When running modules, ensure `./src` is in `PYTHONPATH`.
+3. **No classify_message tool** — Classification is the agent's job. Tool descriptions include the expected JSON schema so the agent knows what to pass.
 2. **No prepare_schedule_items tool** — Formatting approval summaries is text generation, which the agent handles.
 3. **No setup_wizard tool** — Setup is three atomic tools (detect, list, save) orchestrated by the agent.
 4. **pyobjc over AppleScript** — Chinese medical terms contain special characters that break AppleScript string escaping. pyobjc EventKit returns proper event IDs and error info.
@@ -198,13 +203,20 @@ classifies + routes; MinerU converts files; body comes from raw_body_path.
    expression is unambiguous ("tomorrow 3pm", "5/8 14:00"). Vague expressions
    ("next week") → prompt user to clarify, don't auto-create events.
 3. Multi-message merge: same sender + 5min window → merge; "/split" overrides.
-4. If attachment: call claw_save_attachment
-5. If file attached (PDF/docx/pptx/xlsx/image/plaintext): call
-   claw_convert_to_markdown → get md_path. No hint needed — MinerU is default.
-   - PPT: read converted MD, summarize, pass summary to create_note via
-     content_data (not raw_body_path)
+4. If attachment: call claw_save_attachment (original ALWAYS archived first)
+5. File handling — route by type:
+   - Image / PDF: do NOT convert. Read the file directly with your multimodal
+     vision, summarize the core content, and pass it via content_data. Keep the
+     original as an embedded attachment (create_note renders ![[file]] inline).
+     Only fall back to claw_convert_to_markdown / claw_ocr_image if you lack vision.
+   - Office docs (docx/pptx/xlsx): call claw_convert_to_markdown → md_path.
+     MinerU is the default (offline, local; docling fallback). csv/html also go
+     through this tool but route to markitdown/docling (not MinerU). PPT: read
+     converted MD, summarize, pass summary to create_note via content_data (not raw_body_path).
+   - Other types: pick the best extraction yourself; original stays archived.
 6. Create note (surgery excluded): call claw_create_note with category, type,
-   title, content_data, attachment_paths, raw_body_path=md_path.
+   title, attachment_paths, plus EITHER content_data (image/PDF/PPT summary)
+   OR raw_body_path=md_path (office docs full body).
    Recommended: source_channel, message_ts, converter_used.
 7. If type=idea: create note with idea_stage=raw, then openclaw cron add --at +2min
    for async AI research. Tell user: "想法已归档到创意池（自动调研已排队，约 2 分钟后补充）"

@@ -8,6 +8,22 @@ import yaml
 
 from claw_ea.config import Config
 
+# 可在 Obsidian 笔记内内联渲染的附件类型 → 用 ![[file]] 嵌入展示;其余用 [[file]] 链接
+_EMBED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp", ".gif", ".pdf"}
+
+
+def _render_attachment_ref(path: str) -> str:
+    """Return Obsidian ref for an attachment.
+
+    Images/PDF use embed syntax ![[file]] so they render inline in the note;
+    other types use link syntax [[file]] (Obsidian can't render them inline).
+    """
+    name = Path(path).name
+    if Path(path).suffix.lower() in _EMBED_EXTENSIONS:
+        return f"![[{name}]]"
+    return f"[[{name}]]"
+
+
 # §4.1 claw-ea category → qp type 映射表
 _TYPE_FROM_CATEGORY: dict[str, str] = {
     "meeting": "meeting_minutes",
@@ -110,7 +126,7 @@ def _render_verbatim_header(converter_used: str, attachment_paths: list[str]) ->
     if attachment_paths:
         lines.append("> **原始文件**：")
         for p in attachment_paths:
-            lines.append(f"> - [[{Path(p).name}]]")
+            lines.append(f"> - {_render_attachment_ref(p)}")
     if converter_used:
         lines.append(f"> **转换工具**：{converter_used}")
     lines.append(f"> **转换时间**：{now}")
@@ -168,8 +184,7 @@ def _render_body(category: str, title: str, content_data: dict, attachment_paths
     if attachment_paths:
         lines.append("## 附件")
         for p in attachment_paths:
-            filename = Path(p).name
-            lines.append(f"- [[{filename}]]")
+            lines.append(f"- {_render_attachment_ref(p)}")
         lines.append("")
 
     lines.extend(["## 备注", "（待补充）", ""])
@@ -282,8 +297,12 @@ def register(mcp_instance, config: Config):
     ) -> dict:
         """Create an Obsidian note with Capture-First v2 frontmatter and dedup.
 
-        IMPORTANT: raw_body_path MUST be the md_path from convert_to_markdown
-        for all file-based messages. Never skip the conversion step.
+        File-based messages route by type (see convert_to_markdown):
+        - Image / PDF: pass the agent's vision summary via content_data and the
+          original via attachment_paths — it is embedded inline as ![[file]].
+          Do NOT set raw_body_path for these.
+        - Office docs (docx/pptx/xlsx/csv/html): set raw_body_path to the md_path
+          from convert_to_markdown so the converted body lands verbatim.
         Do NOT create notes for surgery category — use create_calendar_event only.
 
         Args:

@@ -31,8 +31,18 @@ def register(mcp_instance, config: Config):
     async def convert_to_markdown(file_path: str) -> dict:
         """Convert a file to Markdown and save as a temp file.
 
-        IMPORTANT: MUST be called for ALL files (including text) before creating Obsidian notes.
-        For PPT files: agent should read the converted markdown, summarize it, then pass the
+        File-type routing (the agent decides which path to take):
+        - Images / PDF: prefer reading them DIRECTLY with the agent's own multimodal
+          vision — summarize the core content and write it into the note, with the
+          original file kept as an embedded attachment (![[file]]). Only call this
+          tool for images/PDF as a fallback when the agent lacks vision.
+        - Office docs (.docx, .pptx, .xlsx): call this tool — MinerU is the default
+          converter for offline, local conversion (docling fallback).
+        - .csv / .html: call this tool — these route to markitdown / docling
+          (MinerU does not handle them), so converter_used won't be "mineru".
+        - Other file types: the agent picks the best extraction approach, but the
+          original file must still be archived via save_attachment.
+        For PPT files: read the converted markdown, summarize it, then pass the
         summary to create_obsidian_note via content_data (do NOT use raw_body_path for PPT).
 
         Supports: PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), CSV, HTML, images, plaintext.
