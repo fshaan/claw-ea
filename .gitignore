@@ -5,3 +5,8 @@ __pycache__/
 dist/
 build/
 .venv/
+.venv.bak/
+
+# Tooling state (regenerable, never commit)
+.gspowers/
+.omc/

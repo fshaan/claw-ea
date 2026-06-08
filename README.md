@@ -55,6 +55,7 @@ claw-ea 是个 Python MCP 服务器，挂在 OpenClaw 上当原生插件跑。�
 - **走 MCP 协议** — OpenClaw、Claude Desktop、Cursor，哪个客户端都能接
 - **数据不出本机** — 医疗信息敏感，不往任何第三方传
 - **用 pyobjc EventKit 而不是 AppleScript** — 中文手术名里各种特殊字符，AppleScript 转义容易炸，EventKit 直接拿到事件 ID 和报错
+- **便携性与迁移** — 项目采用 `src/` 布局，启动脚本使用相对路径自适应。支持跨目录迁移，只需更新网关配置中的路径，无需修改代码内部逻辑。
 
 11 个 MCP 工具：`save_attachment`、`convert_to_markdown`、`create_obsidian_note`、`create_calendar_event`、`delete_calendar_event`、`create_reminder`、`delete_reminder`、`ocr_image`、`detect_obsidian_vault`、`list_apple_calendars`、`save_config`
 
@@ -78,7 +79,7 @@ claw-ea 作为原生插件接入 OpenClaw，`openclaw-plugin/` 目录里是 Type
 帮我安装 claw-ea 插件：
 
 1. 拉代码装依赖：
-   cd ~/Workspace/Claude && git clone https://github.com/fshaan/claw-ea.git claw_EA
+   cd ~/Workspace/devs && git clone https://github.com/fshaan/claw-ea.git claw_EA
    cd claw_EA && uv sync
 
 2. 装 OpenClaw 插件（仓库里带着的）：
@@ -91,8 +92,8 @@ claw-ea 作为原生插件接入 OpenClaw，`openclaw-plugin/` 目录里是 Type
    "claw-ea": {
      "enabled": true,
      "config": {
-       "pythonPath": "<HOME>/Workspace/Claude/claw_EA/.venv/bin/python",
-       "projectDir": "<HOME>/Workspace/Claude/claw_EA"
+       "pythonPath": "<HOME>/Workspace/devs/claw_EA/.venv/bin/python",
+       "projectDir": "<HOME>/Workspace/devs/claw_EA"
      }
    }
    - "plugins.installs" 加：
@@ -134,7 +135,7 @@ claw-ea 作为原生插件接入 OpenClaw，`openclaw-plugin/` 目录里是 Type
 
 1. 拉代码：
    ```bash
-   cd ~/Workspace/Claude
+   cd ~/Workspace/devs
    git clone https://github.com/fshaan/claw-ea.git claw_EA
    cd claw_EA && uv sync
    ```
